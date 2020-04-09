@@ -1,4 +1,4 @@
-// based on cs3650 starter code/hints
+// based on cs3650 starter code
 
 #define _GNU_SOURCE
 #include <string.h>
@@ -13,9 +13,9 @@
 #include <stdio.h>
 #include <stdint.h>
 
-#include "pages.h"
-#include "util.h"
-#include "bitmap.h"
+#include "pages_HINTS.h"
+#include "util_HINTS.h"
+#include "bitmap_HINTS.h"
 
 const int PAGE_COUNT = 256;
 const int NUFS_SIZE  = 4096 * 256; // 1MB

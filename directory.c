@@ -19,101 +19,147 @@
 
 #define ENT_SIZE 16
 
-void
-directory_init()
-{
-    inode* rn = get_inode(1);
-
-    if (rn->mode == 0) {
-        rn->size = 0;
-        rn->mode = 040755;
-    }
-}
-
-char*
-directory_get(int ii)
-{
-    char* base = pages_get_page(1);
-    return base + ii*ENT_SIZE;
+ddirent*
+directory_get_entries(inode* dd) {
+    return (ddirent*)pages_get_page(dd->ptrs[0]);
 }
 
 int
-directory_lookup(const char* name)
+directory_lookup(inode* dd, const char* name)
 {
-    for (int ii = 0; ii < 256; ++ii) {
-        char* ent = directory_get(ii);
-        if (streq(ent, name)) {
-            return ii;
+    // get the entries
+    ddirent* entries = directory_get_entries(dd);
+
+    // iterate through the entries
+    int size = dd->size / sizeof(ddirent);
+    for (int ii = 0; ii < size; ++ii) {
+
+        //check if this entry is what we are looking up
+        char* curr_name = entries[ii].name;
+        if (streq(curr_name, name)) {
+            return entries[ii].inum;
         }
     }
     return -ENOENT;
 }
 
+
 int
 tree_lookup(const char* path)
 {
-    assert(path[0] == '/');
 
     if (streq(path, "/")) {
-        return 1;
+        return 0;
     }
 
-    return directory_lookup(path + 1);
+    path++; //skip the root for s_split
+    slist* curr_level = s_split(path, '/'); // get an iterable list of the levels in the path
+
+    int curr_inum = 0;
+    while(1) {
+        // update the current inum to be the next directory in the path
+        inode* dirnode = get_inode(curr_inum);
+        curr_inum = directory_lookup(dirnode, curr_level->data);
+
+        // if the next directory in the path is nothing, we finished traversing the path
+        if(curr_level->next == 0) {
+            return curr_inum;
+        }
+
+        // continue traversing the path
+        curr_level = curr_level->next;
+    }
+
+    return -ENONET;
 }
 
 int
-directory_put(const char* name, int inum)
+directory_put(inode* dd, const char* name, int inum)
 {
-    char* ent = pages_get_page(1) + inum*ENT_SIZE;
-    strlcpy(ent, name, ENT_SIZE);
-    printf("+ dirent = '%s'\n", ent);
+    // inode should have enough block references
+    grow_inode(dd, dd->size + sizeof(ddirent));
+    get_inode(inum)->refs++;
 
-    inode* node = get_inode(inum);
-    printf("+ directory_put(..., %s, %d) -> 0\n", name, inum);
-    print_inode(node);
+    // put get the directory's next empty slot
+    ddirent* to_put = (ddirent*)(pages_get_page(dd->ptrs[0]) + dd->size) - 1;
+
+    // populate the spot
+    strcpy(to_put->name, name);
+    to_put->inum = inum;
+
+    printf("+ dirent_%d = '%s'\n", to_put->inum, to_put->name);
 
     return 0;
 }
 
 int
-directory_delete(const char* name)
+directory_delete(inode* dd, const char* name)
 {
-    printf(" + directory_delete(%s)\n", name);
+    // Get the entries
+    ddirent* entries = directory_get_entries(dd);
 
-    int inum = directory_lookup(name);
-    free_inode(inum);
+    // Iterate through the entries
+    int size = dd->size / sizeof(ddirent);
+    for (int ii = 0; ii < size; ii += 1)
+    {
+        // the entries of the dd don't have to be deleted, but their inodes need to
+        // to be updated to not be a reference
+        if (streq(entries[ii].name, name))
+        {
+            // decr ref count
+            inode* node = get_inode(entries[ii].inum);
+            node->refs--;
 
-    char* ent = pages_get_page(1) + inum*ENT_SIZE;
-    ent[0] = 0;
+            // dont need the node if there's no more references
+            if (node->refs <= 0)
+            {
+                free_inode(node);
+            }
 
-    return 0;
-}
-
-slist*
-directory_list()
-{
-    printf("+ directory_list()\n");
-    slist* ys = 0;
-
-    for (int ii = 0; ii < 256; ++ii) {
-        char* ent = directory_get(ii);
-        if (ent[0]) {
-            printf(" - %d: %s [%d]\n", ii, ent, ii);
-            ys = s_cons(ent, ys);
+            // update the entries
+            memcpy(&(entries[ii]), &(entries[size - 1]),
+                   sizeof(ddirent));
+            shrink_inode(dd, dd->size - sizeof(ddirent));
+            return 0;
         }
     }
 
-    return ys;
+    return -ENOENT;
+}
+
+slist*
+directory_list(const char* path)
+{
+    // Get the entries based on the path
+    int dirnum = tree_lookup(path);
+    inode* dd = get_inode(dirnum);
+
+    ddirent* entries = directory_get_entries(dd);
+
+    // iterate through the entries
+    int size = dd->size / sizeof(ddirent);
+    slist* names = NULL;
+    for (int ii = 0; ii < size; ii += 1)
+    {
+        // add this entry to the list of names
+        char* first = entries[ii].name;
+        names = s_cons(first, names);
+    }
+
+    return names;
 }
 
 void
 print_directory(inode* dd)
 {
-    printf("Contents:\n");
-    slist* items = directory_list(dd);
-    for (slist* xs = items; xs != 0; xs = xs->next) {
-        printf("- %s\n", xs->data);
+    //  Get the entries
+    ddirent* entries = directory_get_entries(dd);
+
+    // iterate through the entries
+    int size = dd->size / sizeof(ddirent);
+    for (int ii = 0; ii < size; ii += 1)
+    {
+        // print the entry
+        printf("> %s\n", entries[ii].name);
     }
-    printf("(end of contents)\n");
-    s_free(items);
 }

@@ -6,42 +6,33 @@ HDRS := $(wildcard *.h)
 CFLAGS := -g `pkg-config fuse --cflags`
 LDLIBS := `pkg-config fuse --libs` -lbsd
 
-all: cowmount cowtool
+all: nufsmount nufstool
 
-cowtool: $(filter-out cowmount.o, $(OBJS))
-	gcc $(CLFAGS) -o $@ $^ $(LDLIBS)
+nufstool: $(filter-out nufsmount.o, $(OBJS))
+	gcc $(CFLAGS) -o $@ $^ $(LDLIBS)
 
-cowmount: $(filter-out cowtool.o, $(OBJS))
+nufsmount: $(filter-out nufstool.o, $(OBJS))
 	gcc $(CLFAGS) -o $@ $^ $(LDLIBS)
 
 %.o: %.c $(HDRS)
 	gcc $(CFLAGS) -c -o $@ $<
 
-disk0.cow: cowtool
-	mkdir -p mnt || true
-	if [ ! -e disk0.cow ]; then ./cowtool new disk0.cow; fi
-
 clean: unmount
-	rm -f cowmount cowtool *.o test.log disk0.cow disk1.cow
+	rm -f nufsmount nufstool *.o test.log data.nufs
 	rmdir mnt || true
 
-mount: all
-	make disk0.cow
-	./cowmount -s -f mnt disk0.cow
+mount: nufsmount
+	mkdir -p mnt || true
+	./nufsmount -s -f mnt data.nufs
 
 unmount:
 	fusermount -u mnt || true
 
-cleanmount:
-	make clean
-	make all
-	make mount
-
 test: all
 	perl test.pl
 
-gdb: all
-	make disk0.cow
-	gdb --args ./cowmount -s -f mnt disk0.cow
+gdb: nufsmount
+	mkdir -p mnt || true
+	gdb --args ./nufsmount -s -f mnt data.nufs
 
 .PHONY: all clean mount unmount gdb

@@ -1,5 +1,7 @@
-#ifndef PAGES_H
-#define PAGES_H
+// based on cs3650 starter code
+
+#ifndef PAGES_HINTS_H
+#define PAGES_HINTS_H
 
 #include <stdio.h>
 
@@ -10,6 +12,5 @@ void* get_pages_bitmap();
 void* get_inode_bitmap();
 int alloc_page();
 void free_page(int pnum);
-
 
 #endif
