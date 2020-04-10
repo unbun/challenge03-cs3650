@@ -212,8 +212,8 @@ storage_mknod(const char* path, int mode)
     {
         inode* dd = get_inode(dir_inum);
 
-        char* local_path = strdup(path); // get a local copy of the constant char
-        char* file = basename(local_path); // the file or base directory
+        char* path_lvar = strdup(path); // get a local copy of the constant char
+        char* file = basename(path_lvar); // the file or base directory
         if (directory_lookup(dd, file) > 0)
         {
             rv = -EEXIST;
@@ -227,7 +227,7 @@ storage_mknod(const char* path, int mode)
             rv = directory_put(dd, file, inum);
         }
 
-        free(local_path);
+        free(path_lvar);
     }
 
     return rv;
@@ -244,8 +244,8 @@ storage_unlink(const char* path)
 
     int rv = 0;
 
-    char* local_path = strdup(path);  // get a local copy of the constant char
-    char* file = basename(local_path);  // the file or base directory
+    char* path_lvar = strdup(path);  // get a local copy of the constant char
+    char* file = basename(path_lvar);  // the file or base directory
     int inum = directory_lookup(get_inode(dir_inum), file);
     if (inum < 0)
     {
@@ -263,7 +263,7 @@ storage_unlink(const char* path)
         rv = directory_delete(get_inode(dir_inum), file);
     }
 
-    free(local_path);
+    free(path_lvar);
     return rv;
 }
 
@@ -278,8 +278,8 @@ storage_link(const char* from, const char* to)
         return s_from_inum; // directory does not exist
     }
 
-    char* from_local_path = strdup(from);
-    char* from_file = basename(from_local_path);
+    char* from_path_lvar = strdup(from);
+    char* from_file = basename(from_path_lvar);
 
     // hard link
     int h_from_inum = directory_lookup(get_inode(s_from_inum), from_file);
@@ -297,8 +297,8 @@ storage_link(const char* from, const char* to)
         return s_to_inum; // directory does not exist
     }
 
-    char* to_local_path = strdup(to);
-    char* to_file = basename(to_local_path);
+    char* to_path_lvar = strdup(to);
+    char* to_file = basename(to_path_lvar);
 
     // hard link
     int to_inum = directory_lookup(get_inode(s_to_inum), to_file);
@@ -320,8 +320,8 @@ storage_link(const char* from, const char* to)
         return -EEXIST;
     }
 
-    free(from_local_path);
-    free(to_local_path);
+    free(from_path_lvar);
+    free(to_path_lvar);
     return rv;
 }
 
@@ -338,8 +338,8 @@ storage_rename(const char* path, const char* to)
 
     int rv = 0;
 
-    char* local_path = strdup(path);
-    char* file = basename(local_path);
+    char* path_lvar = strdup(path);
+    char* file = basename(path_lvar);
 
     int inum = directory_lookup(get_inode(dir_inum), file);
 
@@ -367,7 +367,7 @@ storage_rename(const char* path, const char* to)
         }
     }
 
-    free(local_path);
+    free(path_lvar);
     return rv;
 }
 
@@ -396,6 +396,60 @@ storage_set_time(const char* path, const struct timespec ts[2])
 slist*
 storage_list(const char* path)
 {
-    // i love this one
-    return directory_list(path);
+    slist* result = NULL;
+
+    int inum = tree_lookup(path);
+    if (inum < 0)
+    {
+        return result;
+    }
+
+    slist* children = directory_list(path);
+    slist* curr = children;
+
+    inode* base_dir = get_inode(inum);
+
+    while (curr)
+    {
+        char* curr_name = curr->data;
+
+        // cons the current child to the result
+        printf("base: '%s' curr:'%s'\n", path, curr->data);
+
+
+        // If thhe current child is a directory, we will
+        // need to recur with it
+        int curr_inum = directory_lookup(base_dir, curr_name);
+        inode* curr_inode = get_inode(curr_inum);
+
+
+        char* child_path = NULL;
+        
+        if (!streq(path, "/")) {
+            child_path = strdup(path);
+            child_path = strcat(child_path, "/");
+            child_path = strcat(child_path, curr_name);
+        } else {
+            child_path = strcat(strdup(path), curr_name);
+        }
+
+        if(inode_is_dir(curr_inode)) {
+            printf("\t new base: '%s'\n", child_path);
+
+            // slist* childdir_list = storage_list(child_path);
+            // while(childdir_list) {
+            //     char* full_name = strcat(child_path, childdir_list->data);
+            //     result = s_cons(full_name, result);
+            //     childdir_list = childdir_list->next;
+            // }
+
+            result = s_concat(storage_list(child_path), result);
+        }
+
+        result = s_cons(child_path, result);
+
+        curr = curr->next;
+    }
+
+    return result;
 }

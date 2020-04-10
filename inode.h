@@ -31,6 +31,7 @@ void free_inode(inode* node);
 int grow_inode(inode* node, int size);
 int shrink_inode(inode* node, int size);
 int inode_get_pnum(inode* node, int fpn);
+int inode_is_dir(inode* node);
 
 void inode_copy_stats(inode* node, struct stat* st);
 

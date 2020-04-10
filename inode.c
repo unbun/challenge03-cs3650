@@ -53,7 +53,7 @@ inode*
 get_inode(int inum)
 {
     // max amount of inodes is 4096
-    assert(inum * sizeof(inode) < 4096);
+    // assert(inum * sizeof(inode) < 4096);
     return (inode*)inodes_base + inum;
 }
 
@@ -177,6 +177,16 @@ inode_copy_stats(inode* node, struct stat* st)
     st->st_mtim = node->ts[1];
     st->st_uid = getuid();
     st->st_nlink = node->refs; // number of hard links
+}
+
+int
+inode_is_dir(inode* node)
+{
+    int mode = (int)node->mode;
+    int upper = mode / 512; // 8^3
+
+    //printf("\t\t[DEBUG] is_dir %d: %d reduced -> %d\n", node->inum, mode, upper);
+    return (upper == 32);
 }
 
 void
