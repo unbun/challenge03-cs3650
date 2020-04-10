@@ -10,17 +10,31 @@
 
 #define FUSE_USE_VERSION 26
 #include <fuse.h>
+#include <libgen.h>
 
 #include "storage.h"
 #include "slist.h"
 #include "util.h"
+#include "directory.h"
 
 // implementation for: man 2 access
 // Checks if a file exists.
 int
 nufs_access(const char *path, int mask)
 {
-    int rv = 0;
+    struct stat st;
+
+    int rv = storage_stat(path, &st);
+
+    if (((mask & R_OK) && !(st.st_mode & S_IRUSR))
+        || ((mask & W_OK) && !(st.st_mode & S_IWUSR))
+        || ((mask & X_OK) && !(st.st_mode & S_IXUSR))
+        || ((mask & X_OK) && !(st.st_mode & S_IXUSR)))
+    {
+        // don't have read access but want it
+        rv = -EACCES;
+    }
+
     printf("access(%s, %04o) -> %d\n", path, mask, rv);
     return rv;
 }
@@ -30,36 +44,63 @@ nufs_access(const char *path, int mask)
 int
 nufs_getattr(const char *path, struct stat *st)
 {
+    // man 3 errno for error numbers
+    // 0, + means success, - mean fail
     int rv = storage_stat(path, st);
     printf("getattr(%s) -> (%d) {mode: %04o, size: %ld}\n", path, rv, st->st_mode, st->st_size);
     return rv;
 }
 
 // implementation for: man 2 readdir
-// lists the contents of a directory
+// lists the contents of a directory (ls)
 int
 nufs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
              off_t offset, struct fuse_file_info *fi)
 {
     struct stat st;
-    char item_path[128];
-    int rv;
 
-    rv = storage_stat(path, &st);
-    assert(rv == 0);
+    char* dirc = strdup(path);
+    char* dname = dirname(dirc);
+    int rv = nufs_getattr(dname, &st);
+    free(dirc);
 
-    filler(buf, ".", &st, 0);
-
-    slist* items = storage_list("/");
-    for (slist* xs = items; xs != 0; xs = xs->next) {
-        printf("+ looking at path: '%s'\n", xs->data);
-        item_path[0] = '/';
-        strlcpy(item_path + 1, xs->data, 127);
-        rv = storage_stat(item_path, &st);
-        assert(rv == 0);
-        filler(buf, xs->data, &st, 0);
+    if (rv != 0)
+    {
+        return rv;
     }
-    s_free(items);
+
+    //TODO: implement in storage
+
+    // add parent directory to the list
+    filler(buf, "..", &st, 0);
+
+    int dirnum = tree_lookup(path);
+    if (dirnum < 0)
+    {
+        rv = dirnum;
+    }
+    else
+    {
+        inode* node = get_inode(dirnum);
+        inode_copy_stats(node, &st);
+
+        // fill the byffer with the stats
+        filler(buf, ".", &st, 0);
+
+        // read sub directories
+        slist* entries = directory_list(path);
+        slist* curr = entries;
+        while (curr)
+        {
+            int child_num = directory_lookup(node, curr->data);
+            inode_copy_stats(get_inode(child_num), &st);
+            filler(buf, curr->data, &st, 0);
+
+            curr = curr->next;
+        }
+
+        s_free(entries);
+    }
 
     printf("readdir(%s) -> %d\n", path, rv);
     return 0;
@@ -70,6 +111,7 @@ nufs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 int
 nufs_mknod(const char *path, mode_t mode, dev_t rdev)
 {
+    // TODO: what is rdev?
     int rv = storage_mknod(path, mode);
     printf("mknod(%s, %04o) -> %d\n", path, mode, rv);
     return rv;
@@ -80,7 +122,8 @@ nufs_mknod(const char *path, mode_t mode, dev_t rdev)
 int
 nufs_mkdir(const char *path, mode_t mode)
 {
-    int rv = -1;
+    mode_t dir_mode = 040000 + (mode % 10000);
+    int rv = nufs_mknod(path, dir_mode, 0);
     printf("mkdir(%s) -> %d\n", path, rv);
     return rv;
 }
@@ -93,20 +136,36 @@ nufs_unlink(const char *path)
     return rv;
 }
 
+// hardlinks (for files or directories)
 int
 nufs_link(const char *from, const char *to)
 {
-    int rv = -1;
+    int rv = storage_link(from, to);
     printf("link(%s => %s) -> %d\n", from, to, rv);
-	return rv;
+    return rv;
 }
 
+// should fail if directory is not empty
 int
 nufs_rmdir(const char *path)
 {
-    int rv = -1;
+    int rv = 0;
+
+    int inum = tree_lookup(path);
+    if (inum < 0)
+    {
+        return inum;
+    }
+
+    // probably fastest way to check if empty
+    slist* list = directory_list(path);
+    if (list != NULL)
+    {
+        rv = -ENOTEMPTY;
+    }
+
     printf("rmdir(%s) -> %d\n", path, rv);
-    return rv;
+    return 0; // TODO: implement
 }
 
 // implements: man 2 rename
@@ -122,7 +181,7 @@ nufs_rename(const char *from, const char *to)
 int
 nufs_chmod(const char *path, mode_t mode)
 {
-    int rv = -1;
+    int rv = -1; // TODO: implement
     printf("chmod(%s, %04o) -> %d\n", path, mode, rv);
     return rv;
 }
@@ -141,7 +200,7 @@ nufs_truncate(const char *path, off_t size)
 int
 nufs_open(const char *path, struct fuse_file_info *fi)
 {
-    int rv = nufs_access(path, 0);
+    int rv = nufs_access(path, 0); // TODO: implement... unless?
     printf("open(%s) -> %d\n", path, rv);
     return rv;
 }
@@ -179,7 +238,7 @@ int
 nufs_ioctl(const char* path, int cmd, void* arg, struct fuse_file_info* fi,
            unsigned int flags, void* data)
 {
-    int rv = -1;
+    int rv = -1; // can safely ignore this
     printf("ioctl(%s, %d, ...) -> %d\n", path, cmd, rv);
     return rv;
 }
@@ -212,7 +271,7 @@ int
 main(int argc, char *argv[])
 {
     assert(argc > 2 && argc < 6);
-    storage_init(argv[--argc], 0);
+    storage_init(argv[--argc]);
     nufs_init_ops(&nufs_ops);
     return fuse_main(argc, argv, &nufs_ops, NULL);
 }
