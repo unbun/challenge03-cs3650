@@ -121,7 +121,9 @@ storage_write(const char* path, const char* buf, size_t size, off_t offset)
     inode* node = get_inode(inum);
     printf("+ writing to page: %d\n", inum);
 
-    // grow or shrink the node for writing
+    // TODO: copy the node and work with that new_node
+
+    // grow or shrink the new_node for writing
     int write_size = offset + size;
     if(node->size < write_size)
     {
@@ -149,6 +151,8 @@ storage_write(const char* path, const char* buf, size_t size, off_t offset)
         curr = finish;
         buf += 4096;
     }
+
+    // TODO: go up the node's path and update everything to be a new version
 
     return size;
 }

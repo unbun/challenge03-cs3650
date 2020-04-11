@@ -21,6 +21,9 @@ typedef struct inode
 */
 
 
+// TODO: best way of version tracking
+//     - maybe have a list of these bitmaps, one for each verision?
+//     - maybe make a special structure for the root inode
 static void* inodes_base = 0;
 const int INODE_COUNT = 4096 / sizeof(inode);
 

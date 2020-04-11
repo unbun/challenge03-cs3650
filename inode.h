@@ -35,4 +35,7 @@ int inode_is_dir(inode* node);
 
 void inode_copy_stats(inode* node, struct stat* st);
 
+// TODO: create a new node based on another, but it has a different index/inum
+// TOOD: inode* inode_copy(inode* node);
+
 #endif
