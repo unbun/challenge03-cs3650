@@ -20,9 +20,6 @@ typedef struct inode
 } inode;
 */
 
-// ATTRIBUTION: Michael Herbert (past CS3650 student)
-// helped me understand how to keep track of the inodes with the base
-// pointer. base pointer allows me to treat inodes like their own set of blocks
 
 static void* inodes_base = 0;
 const int INODE_COUNT = 4096 / sizeof(inode);

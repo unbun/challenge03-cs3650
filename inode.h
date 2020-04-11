@@ -12,7 +12,7 @@
 
 typedef struct inode
 {
-    int inum;              // index in inode bitmap. see attribution in inodes.c
+    int inum;              // index in inode bitmap.
 
     int refs;              // number of references
     int mode;              // permission & type
