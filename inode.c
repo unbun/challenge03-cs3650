@@ -36,17 +36,17 @@ inode_init()
 {
     // set the page bit for the inodes
     // the inodes should be the first things after the bitmaps
-    if (!bitmap_get(get_pages_bitmap(), 1))
+    if (!bitmap_get(get_pages_bitmap(), 1)) // TODO: instead of 1, use root variable
     {
         // allocate a page for the
         int page = alloc_page();
-        assert(page == 1);
+        assert(page == 1); / TODO: instead of 1, use root variable
         assert(inodes_base = pages_get_page(page));
     }
     else
     {
         // set the start of the inodes
-        inodes_base = pages_get_page(1);
+        inodes_base = pages_get_page(1); // TODO: instead of 1, use root variable
     }
 }
 
@@ -58,6 +58,37 @@ get_inode(int inum)
     // assert(inum * sizeof(inode) < 4096);
     return (inode*)inodes_base + inum;
 }
+
+/*
+    int refs;              // number of references
+    int mode;              // permission & type
+    int size;              // bytes
+    int ptrs[NUM_PTRS];    // direct pointers to the page
+    int iptr;              // single indirect pointer
+
+    struct timespec ts[2]; // last updated time
+*/
+
+
+inode* 
+copy_inode(inode* inode) {
+    inode* new_inode = get_inode(alloc_inode());
+    new_inode->refs = inode->refs;
+    new_inode->mode = inode->mode;
+    grow_inode(new_inode, inode->size);
+    
+    memcpy(new_inode->ptrs[0], inode->ptrs[0], inode->size);
+
+    //TODO: MAYBE CHANGE THIS
+    int* iptrs = (int*)pages_get_page(inode->iptr);
+    new_inode->iptr = *iptrs;
+
+    new_inode->ts[0] = inode->ts[0];
+    new_inode->ts[1] = inode->ts[1];
+
+    return new_inode;
+}
+
 
 int
 alloc_inode()

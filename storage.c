@@ -119,19 +119,21 @@ storage_write(const char* path, const char* buf, size_t size, off_t offset)
 
     // get the node
     inode* node = get_inode(inum);
+
+    // TODO: copy the node and work with that cow_node
+    inode* cow_node = copy_inode(node);
     printf("+ writing to page: %d\n", inum);
 
-    // TODO: copy the node and work with that new_node
 
-    // grow or shrink the new_node for writing
+    // grow or shrink the cow_node for writing
     int write_size = offset + size;
-    if(node->size < write_size)
+    if(cow_node->size < write_size)
     {
-        grow_inode(node, write_size);
+        grow_inode(cow_node, write_size);
     }
-    else if (node->size > write_size)
+    else if (cow_node->size > write_size)
     {
-        shrink_inode(node, write_size);
+        shrink_inode(cow_node, write_size);
     }
 
     off_t curr = offset;
@@ -144,7 +146,7 @@ storage_write(const char* path, const char* buf, size_t size, off_t offset)
         // arithmetic from Michael Herbert
         finish = min((curr + 4096) & (~4095), offset + size);
 
-        char* data = pages_get_page(inode_get_pnum(node, curr / 4096));
+        char* data = pages_get_page(inode_get_pnum(cow_node, curr / 4096));
         data = data + curr % 4096;
         memcpy(data, buf, finish - curr);
 
@@ -152,11 +154,42 @@ storage_write(const char* path, const char* buf, size_t size, off_t offset)
         buf += 4096;
     }
 
+
     // TODO: go up the node's path and update everything to be a new version
+    traverse_and_update(path, node->inum, cow_node->inum);
 
     return size;
 }
 
+int
+traverse_and_update(const char *path, int old_inum, int new_inum)
+{
+    if(streq(path, "/")) {
+        add_root(new_inum);
+        return 0;
+    }
+
+    //remove me from path   
+    //get inode for directory,
+    int inum = tree_lookup_stop_early(path);
+    if (inum < 0) {
+        return inum; // should be an error value
+    }
+
+    //  copy directory, add me instead of old inode
+    inode* dir = get_inode(inum);
+
+    //     get entry of old version (using old_inum)
+    //     replace that entry with me (using new_inum)
+    inode* cow_dir = copy_inode(inum);
+    replace_in_entries(cow_dir, old_inum, new_inum);
+
+    printf("old inum: %d; new inum: %d");
+
+    traverse_and_update(dirname(path), dir->inum, cow_dir->inum);
+    //get inode above me, copy inode above, add me instad of old node
+    //if root, do above process, and call add_root()
+}
 
 int
 storage_truncate(const char *path, off_t size)

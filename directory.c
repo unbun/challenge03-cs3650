@@ -19,6 +19,8 @@
 
 #define ENT_SIZE 16
 
+int root_list[7] = {0}; 
+
 ddirent*
 directory_get_entries(inode* dd) {
     return (ddirent*)pages_get_page(dd->ptrs[0]);
@@ -43,13 +45,46 @@ directory_lookup(inode* dd, const char* name)
     return -ENOENT;
 }
 
+int
+get_current_root(){
+    return root_list[0];
+}
+
+void
+add_root(int rnum){
+    for (int ii = 0; ii < 6; ++ii) {
+        root_list[ii+1] = root_list[ii];
+    }
+    root_list[0] = rnum;
+}
+
+/*typedef struct ddirent {
+    char name[DIR_NAME];
+    int  inum;
+    char _reserved[12];
+} ddirent;*/
+
+void
+replace_in_entries(inode* dir, int old_inum, int new_inum){
+    ddirent* entries = directory_get_entries(dd);
+
+    int size = dir->size / sizeof(ddirent);
+    for(int ii = 0; ii < size; ii++) {
+        ddirent curr = entries[ii];
+        if(curr->inum == old_inum) {
+            curr->inum = new_inum;
+        }
+    }
+
+    return;
+}
 
 int
 tree_lookup(const char* path)
 {
 
     if (streq(path, "/")) {
-        return 0;
+        return get_current_root();
     }
 
     path++; //skip the root for s_split
