@@ -1,10 +1,15 @@
 #ifndef ROOTL_H
 #define ROOTL_H
 
-void root_init();
+#include "inode.h"
+
+#define HISTORY_SIZE 7
+
+void root_init(int new_disk);
 
 int get_current_root();
+inode* get_root_inode();
 
-int add_root();
+void add_root(inode* rnode);
 
 #endif

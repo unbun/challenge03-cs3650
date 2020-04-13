@@ -7,6 +7,7 @@
 #include "pages.h"
 #include "inode.h"
 #include "util.h"
+#include "root_list.h"
 
 /*
 typedef struct inode
@@ -36,7 +37,7 @@ inode_init()
     // the inodes should be the first things after the bitmaps
     if (!bitmap_get(get_pages_bitmap(), 1))
     {
-        // allocate a page for the
+        // allocate a page for the inodes
         int page = alloc_page();
         assert(page == 1);
         assert(inodes_base = pages_get_page(page));
@@ -57,6 +58,61 @@ get_inode(int inum)
     return (inode*)inodes_base + inum;
 }
 
+inode* 
+copy_inode(inode* node, int size)
+{
+    printf("+ copy_inode(%d) -> ... \n", node->inum);
+    
+    int new_inum = alloc_inode();
+    inode* new_node  = get_inode(new_inum);
+
+    
+    // this will allocate new page data
+    grow_inode(new_node, size);
+    
+    // this will copy the old direct page(s) data to the new direct page(s) data
+    void* page0_old = pages_get_page(node->ptrs[0]);
+    void* page0_new = pages_get_page(new_node->ptrs[0]);
+    memcpy(page0_new, page0_old, size); // What should size be?
+
+    void* page1_old = pages_get_page(node->ptrs[1]);
+    void* page1_new = pages_get_page(new_node->ptrs[1]);
+    memcpy(page1_new, page1_old, size); // What should size be?
+
+    //TODO: MAYBE CHANGE THIS
+    new_node->iptr = node->iptr;
+
+    new_node->refs = node->refs;
+    new_node->mode = node->mode;
+    assert(new_node->mode == node->mode);
+
+    new_node->ts[0] = node->ts[0];
+    new_node->ts[1] = node->ts[1];
+
+    printf("... end of copy_inode(%d) -> %d\n", node->inum, new_node->inum);
+
+    return new_node;
+}
+
+int
+find_last_root()
+{
+    assert(inodes_base);
+
+    void* ibm = get_inode_bitmap();
+
+    for (int ii = 0; ii < INODE_COUNT; ++ii)
+    {
+        inode* curr = get_inode(ii);
+        if(curr->is_root) {
+            return ii;
+        }
+    }
+
+    // return 0;
+    return -1;
+}
+
 int
 alloc_inode()
 {
@@ -74,6 +130,7 @@ alloc_inode()
             inode* node = get_inode(ii);
             node->inum = ii;
             node->size = 0;
+            node->is_root = 0;
 
             return ii;
         }
@@ -95,8 +152,7 @@ free_inode(inode* node)
 int
 grow_inode(inode* node, int size)
 {
-    printf("+ grow_inode( ... , %d) \n", size);
-    print_inode(node);
+    printf("+ grow_inode( %d , %d) \n", node->inum, size);
 
     int blocks_to_grow = bytes_to_pages(size);
     int blocks_on_node = bytes_to_pages(node->size);
@@ -126,7 +182,11 @@ grow_inode(inode* node, int size)
         blocks_on_node++;
     }
 
+
     node->size = size;
+
+    print_inode(node);
+
     return node->size;
 }
 
@@ -192,12 +252,15 @@ inode_is_dir(inode* node)
 void
 print_inode(inode* node)
 {
-//    printf("node_%d{mode: %04o, size: %d}\n",
-//           node->inum, node->mode, node->size);
-    printf("node_%d{ptrs: [%d, %d], indir:%d size: %d}\n",
-           node->inum, node->ptrs[0], node->ptrs[1], node->iptr, node->size);
-//    printf("node_%d{ts: [%ld, %ld: %ld, %ld]}\n",
-//           node->inum, node->ts[0].tv_sec, node->ts[0].tv_nsec,
-//           node->ts[1].tv_sec, node->ts[1].tv_nsec);
+
+    // printf("node_%d{ptrs:[%d, %d]}, indir:%d\n", node->inum, node->ptrs[0], node->ptrs[1], node->iptr);
+
+    printf("\tnode_%d{\n", node->inum);
+    printf("\t\tptrs:[%d, %d], indir:%d\n", node->ptrs[0], node->ptrs[1], node->iptr);
+    printf("\t\tmode:%04o, size:%d\n", node->mode, node->size);
+    // printf("\t\tts[0]: [%ld, %ld], ts[1]: [%ld, %ld]\n",
+    //  node->ts[0].tv_sec, node->ts[0].tv_nsec,
+    //  node->ts[1].tv_sec, node->ts[1].tv_nsec);
+    printf("\t}\n");
 }
 

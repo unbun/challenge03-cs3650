@@ -13,6 +13,7 @@
 #include <bsd/string.h>
 #include <stdint.h>
 
+#include "root_list.h"
 #include "storage.h"
 #include "slist.h"
 #include "util.h"
@@ -20,6 +21,10 @@
 #include "inode.h"
 #include "directory.h"
 #include "bitmap.h"
+
+
+/////////////////////////////////////////////////////
+///////////////// HELPERS ///////////////////////////
 
 //tree lookup but stop before the last item in the file.
 int
@@ -31,27 +36,61 @@ tree_lookup_stop_early(const char* path)
     return inum;
 }
 
+int
+traverse_and_update(const char *path, int old_inum, int new_inum)
+{
+    printf("+ traverse_and_update path %s (%d -> %d)\n", path, old_inum, new_inum);
+
+    // I am the new_inum, I want to replace the old_inum
+    // I want to exist at path path
+
+    if(streq(path, "/")) {
+        // I am a new root
+        inode* new_root = get_inode(new_inum);
+        add_root(new_root);
+        return 0;
+    }
+
+    //remove me from path   
+    //get inode for directory,
+    int inum = tree_lookup_stop_early(path);
+    if (inum < 0) {
+        printf("!!! tree lookup(%s) fail: %d\n", path, inum);
+        return inum; // should be an error value
+    }
+
+    // copy my directory 
+    inode* dir = get_inode(inum);
+    inode* cow_dir = copy_inode(dir, dir->size);
+
+    //     get entry of the old version (old_inum)
+    //     replace that entry with me (new_inum)
+    replace_in_entries(cow_dir, old_inum, new_inum, path);
+
+
+    char* pathdup = strdup(path);
+
+    //    my direcory is cow_dir, so I want to replace dir with cow_dir
+    traverse_and_update(dirname(pathdup), dir->inum, cow_dir->inum);
+    free(pathdup);
+
+    //get inode above me, copy inode above, add me instad of old node
+    //if root, do above process, and call add_root()
+}
+
+///////////////// HELPERS ///////////////////////////
+/////////////////////////////////////////////////////
+
 //TODO: refactor/ abstract out some of these functions
 
 void
-storage_init(const char* path)
+storage_init(const char* path, int create)
 {
-    printf("+ storage_init(%s);\n", path);
+    printf("+ storage_init(%s, %d);\n", path, create);
     pages_init(path); // alloc page 0 for bitmaps
     inode_init();     // should alloc page 1 for inodes if needed
 
-    if (!bitmap_get(get_inode_bitmap(), 0))
-    {
-        // force root inode
-        assert(alloc_inode() == 0);
-
-        inode* root = get_inode(0);
-        root->mode = 040755; // dir
-    }
-    else
-    {
-        assert(get_inode(0)->mode != 0);
-    }
+    root_init(create);      // should alloc_inodes 0-6 for the root inodes
 }
 
 int
@@ -106,7 +145,8 @@ storage_read(const char* path, char* buf, size_t size, off_t offset)
         buf += 4096;
     }
 
-    return size;
+    return size; 
+
 }
 
 int
@@ -119,17 +159,21 @@ storage_write(const char* path, const char* buf, size_t size, off_t offset)
 
     // get the node
     inode* node = get_inode(inum);
-    printf("+ writing to page: %d\n", inum);
+    printf("+ writing to inode: %d\n", inum);
 
+    // copy the node for writing
+    inode* cow_node = copy_inode(node, size);
+
+    printf("+ resize and memcpy inode %d\n", cow_node->inum);
     // grow or shrink the node for writing
     int write_size = offset + size;
-    if(node->size < write_size)
+    if(cow_node->size < write_size)
     {
-        grow_inode(node, write_size);
+        grow_inode(cow_node, write_size);
     }
-    else if (node->size > write_size)
+    else if (cow_node->size > write_size)
     {
-        shrink_inode(node, write_size);
+        shrink_inode(cow_node, write_size);
     }
 
     off_t curr = offset;
@@ -142,13 +186,22 @@ storage_write(const char* path, const char* buf, size_t size, off_t offset)
         // arithmetic from Michael Herbert
         finish = min((curr + 4096) & (~4095), offset + size);
 
-        char* data = pages_get_page(inode_get_pnum(node, curr / 4096));
+        char* data = pages_get_page(inode_get_pnum(cow_node, curr / 4096));
         data = data + curr % 4096;
         memcpy(data, buf, finish - curr);
 
         curr = finish;
         buf += 4096;
     }
+
+    printf("========================\n");
+    printf("\t[DEBUG] old inode:\n");
+    print_inode(node);
+    printf("\t[DEBUG] copied inode:\n");
+    print_inode(cow_node);
+    printf("========================\n");
+
+    traverse_and_update(path, node->inum, cow_node->inum);
 
     return size;
 }
@@ -414,7 +467,7 @@ storage_list(const char* path)
         char* curr_name = curr->data;
 
         // cons the current child to the result
-        printf("base: '%s' curr:'%s'\n", path, curr->data);
+        // printf("base: '%s' curr:'%s'\n", path, curr->data);
 
 
         // If thhe current child is a directory, we will
@@ -434,7 +487,7 @@ storage_list(const char* path)
         }
 
         if(inode_is_dir(curr_inode)) {
-            printf("\t new base: '%s'\n", child_path);
+            // printf(" new base: '%s'\n", child_path);
 
             // slist* childdir_list = storage_list(child_path);
             // while(childdir_list) {
@@ -446,7 +499,9 @@ storage_list(const char* path)
             result = s_concat(storage_list(child_path), result);
         }
 
-        result = s_cons(child_path, result);
+        // for some reason, the root gets added to the 
+        // front of every string twice
+        result = s_cons(++child_path, result);
 
         curr = curr->next;
     }

@@ -16,14 +16,22 @@
 #include "slist.h"
 #include "util.h"
 #include "inode.h"
+#include "root_list.h"
 
 #define ENT_SIZE 16
+
+/*typedef struct ddirent {
+    char name[DIR_NAME];
+    int  inum;
+    char _reserved[12];
+} ddirent;*/
 
 ddirent*
 directory_get_entries(inode* dd) {
     return (ddirent*)pages_get_page(dd->ptrs[0]);
 }
 
+// look for an item named name in the directory's entries
 int
 directory_lookup(inode* dd, const char* name)
 {
@@ -43,21 +51,45 @@ directory_lookup(inode* dd, const char* name)
     return -ENOENT;
 }
 
+void
+replace_in_entries(inode* dir, int old_inum, int new_inum, const char* path){
+    ddirent* entries = directory_get_entries(dir);
 
+    int found = 0;
+    int size = dir->size / sizeof(ddirent);
+    for(int ii = 0; ii < size; ii++) {
+        if(entries[ii].inum == old_inum) {
+            entries[ii].inum = new_inum;
+            found = 1;
+        }
+    }
+
+    if(!found) {
+        char* name = basename(strdup(path));
+        directory_put(dir, name, new_inum);
+    }
+
+    return;
+}
+
+
+// returns the inum of the item described by the path
 int
 tree_lookup(const char* path)
 {
 
     if (streq(path, "/")) {
-        return 0;
+        return get_current_root();
     }
 
     path++; //skip the root for s_split
     slist* curr_level = s_split(path, '/'); // get an iterable list of the levels in the path
 
-    int curr_inum = 0;
+    // start traversing the path at the root
+    int curr_inum = get_current_root();
     while(1) {
-        // update the current inum to be the next directory in the path
+
+        // update the current inum to be the next directory/item in the path
         inode* dirnode = get_inode(curr_inum);
         curr_inum = directory_lookup(dirnode, curr_level->data);
 
@@ -143,7 +175,7 @@ directory_list(const char* path)
     {
         // add this entry to the list of names
         char* first = entries[ii].name;
-        printf("dir_list: entry %d: '%s'\n", ii, first);
+        // printf("dir_list: entry %d: '%s'\n", ii, first);
         names = s_cons(first, names);
     }
 

@@ -6,41 +6,60 @@
 #include "bitmap.h"
 #include "pages.h"
 #include "util.h"
+#include "inode.h"
+#include "root_list.h"
 
-
-int* root_list = NULL;
+inode* root_list[HISTORY_SIZE] = { 0 };
 
 //after calling this, root_list should be set up
 void
-root_init()
+root_init(int new_disk)
 {
-    // set the page bit for the root_list
-    // the root_list should be the first things after the bitmaps
-    if (!bitmap_get(get_pages_bitmap(), 2))  {
-        // allocate a page for the root list
-        int page = alloc_page();
-        assert(page == 2);
-        assert(root_list = pages_get_page(page));
+
+    int rnum = 0;
+    if(!new_disk) {
+        rnum = find_last_root();
     }
-    else
+
+    if(!bitmap_get(get_inode_bitmap(), rnum)) {
+        assert(alloc_inode() == rnum);
+
+        inode* rootii = get_inode(rnum);
+        rootii->mode = 040755;
+    }
+    else 
     {
-        // set the root
-        root_list  = pages_get_page(1); 
+        assert(get_inode(rnum)->mode != rnum);
     }
+    
+    root_list[0] = get_inode(rnum);
+    root_list[0]->is_root = 1;
+
 }
+
+inode*
+get_root_inode(){
+    return get_inode(get_current_root());
+}
+
 
 //gets the inum of the current root
 int
 get_current_root(){
-    return 0;
-    // return root_list[0];
+    return root_list[0]->inum;
 }
 
 //push_back onto root stack
 void
-add_root(int rnum) {
-    for (int ii = 0; ii < 6; ++ii) {
-        root_list[ii+1] = root_list[ii];
+add_root(inode* rnode) {
+    printf("+ add_root(%d)\n", rnode->inum);
+
+
+    for (int ii = HISTORY_SIZE - 1; ii > 0; --ii) {
+        root_list[ii] = root_list[ii - 1];
     }
-    root_list[0] = rnum;
+
+    root_list[0]->is_root = 0;
+    root_list[0] = rnode;
+    root_list[0]->is_root = 1;
 }

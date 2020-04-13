@@ -24,6 +24,7 @@ slist* directory_list(const char* path);
 void print_directory(inode* dd);
 
 ddirent* directory_get_entries(inode* dd);
+void replace_in_entries(inode* dir, int old_inum, int new_inum, const char* path);
 
 #endif
 

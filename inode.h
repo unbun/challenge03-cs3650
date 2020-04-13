@@ -20,6 +20,8 @@ typedef struct inode
     int ptrs[NUM_PTRS];    // direct pointers
     int iptr;              // single indirect pointer
 
+    int is_root;
+
     struct timespec ts[2]; // last updated time
 } inode;
 
@@ -32,7 +34,9 @@ int grow_inode(inode* node, int size);
 int shrink_inode(inode* node, int size);
 int inode_get_pnum(inode* node, int fpn);
 int inode_is_dir(inode* node);
-
 void inode_copy_stats(inode* node, struct stat* st);
+
+inode* copy_inode(inode* node, int size);
+int find_last_root();
 
 #endif

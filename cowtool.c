@@ -42,7 +42,7 @@ main(int argc, char* argv[])
     if (streq(cmd, "new")) {
         assert(argc == 3);
 
-        storage_init(img); // 1
+        storage_init(img, 1); // 1
         printf("Created disk image: %s\n", img);
         return 0;
     }
@@ -52,7 +52,7 @@ main(int argc, char* argv[])
         return 1;
     }
 
-    storage_init(img); // 0
+    storage_init(img, 0); // 0
 
     if (streq(cmd, "ls")) {
         slist* xs = image_ls_tree("/");
