@@ -20,6 +20,10 @@
 #include "inode.h"
 #include "directory.h"
 #include "bitmap.h"
+#include "root_list.h"
+
+
+////////// HELPERS ///////////////////////////////////////
 
 //tree lookup but stop before the last item in the file.
 int
@@ -31,6 +35,44 @@ tree_lookup_stop_early(const char* path)
     return inum;
 }
 
+
+int
+traverse_and_update(const char *path, int old_inum, int new_inum)
+{
+    if(streq(path, "/")) {
+        printf("\t[DEBUG] adding root (%s): %d\n", path, new_inum);
+        add_root(new_inum);
+        return 0;
+    }
+
+    //remove me from path   
+    //get inode for directory,
+    int inum = tree_lookup_stop_early(path);
+    if (inum < 0) {
+        printf("\t[DEBUG] tree lookup(%s) fail: %d\n", path, inum);
+        return inum; // should be an error value
+    }
+
+    //  copy directory, add me instead of old inode
+    inode* dir = get_inode(inum);
+    inode* cow_dir = copy_inode(dir);
+
+    //     get entry of old version (using old_inum)
+    //     replace that entry with me (using new_inum)
+    replace_in_entries(cow_dir, old_inum, new_inum);
+
+    printf("\t[DEBUG] old inum: %d; new inum: %d", old_inum, new_inum);
+
+    char* pathdup = strdup(path);
+    traverse_and_update(dirname(pathdup), dir->inum, cow_dir->inum);
+    free(pathdup);
+    //get inode above me, copy inode above, add me instad of old node
+    //if root, do above process, and call add_root()
+}
+
+////////// HELPERS ///////////////////////////////////////
+
+
 //TODO: refactor/ abstract out some of these functions
 
 void
@@ -39,18 +81,21 @@ storage_init(const char* path)
     printf("+ storage_init(%s);\n", path);
     pages_init(path); // alloc page 0 for bitmaps
     inode_init();     // should alloc page 1 for inodes if needed
+    root_init();      // alloc page 2 for root list ???
 
+    // no root created at all
     if (!bitmap_get(get_inode_bitmap(), 0))
     {
         // force root inode
         assert(alloc_inode() == 0);
+        add_root(0);
 
         inode* root = get_inode(0);
         root->mode = 040755; // dir
     }
     else
     {
-        assert(get_inode(0)->mode != 0);
+        assert(get_inode(get_current_root())->mode != 0);
     }
 }
 
@@ -118,10 +163,10 @@ storage_write(const char* path, const char* buf, size_t size, off_t offset)
     }
 
     // get the node
-    inode* node = get_inode(inum);
+    inode* cow_node = get_inode(inum);
 
     // TODO: copy the node and work with that cow_node
-    inode* cow_node = copy_inode(node);
+    // inode* cow_node = copy_inode(node);
     printf("+ writing to page: %d\n", inum);
 
 
@@ -156,39 +201,9 @@ storage_write(const char* path, const char* buf, size_t size, off_t offset)
 
 
     // TODO: go up the node's path and update everything to be a new version
-    traverse_and_update(path, node->inum, cow_node->inum);
+    // traverse_and_update(path, node->inum, cow_node->inum);
 
     return size;
-}
-
-int
-traverse_and_update(const char *path, int old_inum, int new_inum)
-{
-    if(streq(path, "/")) {
-        add_root(new_inum);
-        return 0;
-    }
-
-    //remove me from path   
-    //get inode for directory,
-    int inum = tree_lookup_stop_early(path);
-    if (inum < 0) {
-        return inum; // should be an error value
-    }
-
-    //  copy directory, add me instead of old inode
-    inode* dir = get_inode(inum);
-
-    //     get entry of old version (using old_inum)
-    //     replace that entry with me (using new_inum)
-    inode* cow_dir = copy_inode(inum);
-    replace_in_entries(cow_dir, old_inum, new_inum);
-
-    printf("old inum: %d; new inum: %d");
-
-    traverse_and_update(dirname(path), dir->inum, cow_dir->inum);
-    //get inode above me, copy inode above, add me instad of old node
-    //if root, do above process, and call add_root()
 }
 
 int

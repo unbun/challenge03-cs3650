@@ -21,7 +21,9 @@ const int PAGE_COUNT = 256;
 const int NUFS_SIZE  = 4096 * 256; // 1MB
 
 static int   pages_fd   = -1;
-static void* pages_base =  0;
+static void* pages_base =  0; // where the pages start
+
+// page 0: bitmaps (first half is pages_bitmap, second half is inode_bitmap)
 
 void
 pages_init(const char* path)
@@ -63,6 +65,12 @@ get_inode_bitmap()
 {
     uint8_t* page = pages_get_page(0);
     return (void*)(page + 32);
+}
+
+void* get_pages_rootlist()
+{
+    uint8_t* page = pages_get_page(1);
+    return (void*)(page);
 }
 
 int

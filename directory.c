@@ -16,10 +16,10 @@
 #include "slist.h"
 #include "util.h"
 #include "inode.h"
+#include "root_list.h"
 
 #define ENT_SIZE 16
 
-int root_list[7] = {0}; 
 
 ddirent*
 directory_get_entries(inode* dd) {
@@ -45,18 +45,7 @@ directory_lookup(inode* dd, const char* name)
     return -ENOENT;
 }
 
-int
-get_current_root(){
-    return root_list[0];
-}
 
-void
-add_root(int rnum){
-    for (int ii = 0; ii < 6; ++ii) {
-        root_list[ii+1] = root_list[ii];
-    }
-    root_list[0] = rnum;
-}
 
 /*typedef struct ddirent {
     char name[DIR_NAME];
@@ -66,13 +55,12 @@ add_root(int rnum){
 
 void
 replace_in_entries(inode* dir, int old_inum, int new_inum){
-    ddirent* entries = directory_get_entries(dd);
+    ddirent* entries = directory_get_entries(dir);
 
     int size = dir->size / sizeof(ddirent);
     for(int ii = 0; ii < size; ii++) {
-        ddirent curr = entries[ii];
-        if(curr->inum == old_inum) {
-            curr->inum = new_inum;
+        if(entries[ii].inum == old_inum) {
+            entries[ii].inum = new_inum;
         }
     }
 
@@ -90,7 +78,7 @@ tree_lookup(const char* path)
     path++; //skip the root for s_split
     slist* curr_level = s_split(path, '/'); // get an iterable list of the levels in the path
 
-    int curr_inum = 0;
+    int curr_inum = get_current_root();
     while(1) {
         // update the current inum to be the next directory in the path
         inode* dirnode = get_inode(curr_inum);

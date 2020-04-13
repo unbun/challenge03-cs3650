@@ -25,8 +25,6 @@ void print_directory(inode* dd);
 
 ddirent* directory_get_entries(inode* dd);
 
-int get_current_root(); //return an inum
-void add_root(int rnum);
 void replace_in_entries(inode* dir, int old_inum, int new_inum);
 
 #endif

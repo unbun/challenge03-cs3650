@@ -36,17 +36,16 @@ inode_init()
 {
     // set the page bit for the inodes
     // the inodes should be the first things after the bitmaps
-    if (!bitmap_get(get_pages_bitmap(), 1)) // TODO: instead of 1, use root variable
-    {
+    if (!bitmap_get(get_pages_bitmap(), 1)) {
         // allocate a page for the
         int page = alloc_page();
-        assert(page == 1); / TODO: instead of 1, use root variable
+        assert(page == 1);
         assert(inodes_base = pages_get_page(page));
     }
     else
     {
         // set the start of the inodes
-        inodes_base = pages_get_page(1); // TODO: instead of 1, use root variable
+        inodes_base = pages_get_page(1); 
     }
 }
 
@@ -71,20 +70,23 @@ get_inode(int inum)
 
 
 inode* 
-copy_inode(inode* inode) {
-    inode* new_inode = get_inode(alloc_inode());
-    new_inode->refs = inode->refs;
-    new_inode->mode = inode->mode;
-    grow_inode(new_inode, inode->size);
+copy_inode(inode* node)
+{
+    int new_inum = alloc_inode();
+    inode* new_inode  = get_inode(new_inum);
+
+    new_inode->refs = node->refs;
+    new_inode->mode = node->mode;
+    assert(new_inode->mode == node->mode);
+    grow_inode(new_inode, node->size);
     
-    memcpy(new_inode->ptrs[0], inode->ptrs[0], inode->size);
+    memcpy(pages_get_page(new_inode->ptrs[0]), pages_get_page(node->ptrs[0]), node->size);
 
     //TODO: MAYBE CHANGE THIS
-    int* iptrs = (int*)pages_get_page(inode->iptr);
-    new_inode->iptr = *iptrs;
+    new_inode->iptr = node->iptr;
 
-    new_inode->ts[0] = inode->ts[0];
-    new_inode->ts[1] = inode->ts[1];
+    new_inode->ts[0] = node->ts[0];
+    new_inode->ts[1] = node->ts[1];
 
     return new_inode;
 }
