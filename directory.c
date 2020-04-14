@@ -42,6 +42,7 @@ directory_lookup(inode* dd, const char* name)
             return entries[ii].inum;
         }
     }
+
     return -ENOENT;
 }
 
@@ -68,17 +69,16 @@ replace_in_entries(inode* dir, int old_inum, int new_inum){
 }
 
 int
-tree_lookup(const char* path)
+tree_lookup_hlp(const char* path, int rnum)
 {
-
     if (streq(path, "/")) {
-        return get_current_root();
+        return rnum;
     }
 
     path++; //skip the root for s_split
     slist* curr_level = s_split(path, '/'); // get an iterable list of the levels in the path
 
-    int curr_inum = get_current_root();
+    int curr_inum = rnum;
     while(1) {
         // update the current inum to be the next directory in the path
         inode* dirnode = get_inode(curr_inum);
@@ -94,6 +94,12 @@ tree_lookup(const char* path)
     }
 
     return -ENONET;
+}
+
+int
+tree_lookup(const char* path)
+{
+    tree_lookup_hlp(path, get_current_root());
 }
 
 int

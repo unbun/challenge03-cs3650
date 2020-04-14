@@ -61,7 +61,7 @@ traverse_and_update(const char* path, int old_inum, int new_inum, char* op)
     //     replace that entry with me (using new_inum)
     replace_in_entries(cow_dir, old_inum, new_inum);
 
-    printf("\t[DEBUG] old inum: %d; new inum: %d", old_inum, new_inum);
+    printf("\t[DEBUG] old inum: %d; new inum: %d\n", old_inum, new_inum);
 
     char* pathdup = strdup(path);
     traverse_and_update(dirname(pathdup), dir->inum, cow_dir->inum, op);
@@ -80,8 +80,8 @@ storage_init(const char* path)
 {
     printf("+ storage_init(%s);\n", path);
     pages_init(path); // alloc page 0 for bitmaps
-    inode_init();     // should alloc page 1 for inodes if needed
-    root_init();      // alloc page 2 for root list ???
+    root_init();      // alloc page 1 for root list 
+    inode_init();     // should alloc page 2 for inodes
 
     // no root created at all
     if (!bitmap_get(get_inode_bitmap(), 0))
@@ -90,7 +90,7 @@ storage_init(const char* path)
         assert(alloc_inode() == 0);
 
         char op[24];
-        
+
         snprintf(op, sizeof(op), "init %s", path);
         add_root(0, op);
 
@@ -255,6 +255,8 @@ storage_truncate(const char *path, off_t size)
 int
 storage_mknod(const char* path, int mode)
 {
+ 
+    assert(mode != 0);   
     if (path[0] != '/')
     {
         return -ENOENT;
@@ -497,7 +499,7 @@ storage_list(const char* path)
             result = s_concat(storage_list(child_path), result);
         }
 
-        result = s_cons(++child_path, result);
+        result = s_cons(child_path, result);
 
         curr = curr->next;
     }

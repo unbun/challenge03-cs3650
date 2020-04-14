@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdint.h>
+
 #include "bitmap.h"
 
 // ATTRIBUTION:
@@ -13,7 +14,6 @@ bitmap_get(void* bm, int ii) {
 
 void
 bitmap_put(void* bm, int ii, int vv) {
-
     int idx = ii / 8; // 32 ???
     int shift = ii % 8; // 32 ???
 

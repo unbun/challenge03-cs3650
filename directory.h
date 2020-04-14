@@ -17,6 +17,7 @@ typedef struct ddirent {
 } ddirent;
 
 int directory_lookup(inode* dd, const char* name); // get inum of object name in the dd
+int tree_lookup_hlp(const char* path, int rnum);
 int tree_lookup(const char* path);
 int directory_put(inode* dd, const char* name, int inum);
 int directory_delete(inode* dd, const char* name);

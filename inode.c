@@ -35,17 +35,17 @@ void
 inode_init()
 {
     // set the page bit for the inodes
-    // the inodes should be the first things after the bitmaps
+    // the inodes should be the first th2ngs after the bitmaps
     if (!bitmap_get(get_pages_bitmap(), 1)) {
         // allocate a page for the
         int page = alloc_page();
-        assert(page == 1);
+        assert(page == 2);
         assert(inodes_base = pages_get_page(page));
     }
     else
     {
         // set the start of the inodes
-        inodes_base = pages_get_page(1); 
+        inodes_base = pages_get_page(2); 
     }
 }
 
@@ -80,6 +80,8 @@ copy_inode(inode* node)
     new_node->refs = node->refs;
     new_node->mode = node->mode;
     assert(new_node->mode == node->mode);
+    assert(new_node->mode != 0);
+
     grow_inode(new_node, node->size);
     
     memcpy(pages_get_page(new_node->ptrs[0]), pages_get_page(node->ptrs[0]), node->size);
@@ -124,6 +126,9 @@ alloc_inode()
 void
 free_inode(inode* node)
 {
+    // never free the inodes_base
+    assert(node->inum != 0);
+
     printf("+ free_inode(%d)\n", node->inum);
     print_inode(node);
     bitmap_put(get_inode_bitmap(), node->inum, 0);
