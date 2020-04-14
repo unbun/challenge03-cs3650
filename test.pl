@@ -176,7 +176,7 @@ my $hi1 = read_text("dir1/dir2/dir3/dir4/dir5/hello.txt");
 ok($hi0 eq $hi1, "nested directories");
 
 system("mkdir mnt/numbers");
-for my $ii (1..10) {
+for my $ii (1..50) {
     write_text("numbers/$ii.num", "$ii");
 }
 

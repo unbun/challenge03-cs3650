@@ -37,11 +37,11 @@ tree_lookup_stop_early(const char* path)
 
 
 int
-traverse_and_update(const char *path, int old_inum, int new_inum)
+traverse_and_update(const char* path, int old_inum, int new_inum, char* op)
 {
     if(streq(path, "/")) {
         printf("\t[DEBUG] adding root (%s): %d\n", path, new_inum);
-        add_root(new_inum);
+        add_root(new_inum, op);
         return 0;
     }
 
@@ -64,7 +64,7 @@ traverse_and_update(const char *path, int old_inum, int new_inum)
     printf("\t[DEBUG] old inum: %d; new inum: %d", old_inum, new_inum);
 
     char* pathdup = strdup(path);
-    traverse_and_update(dirname(pathdup), dir->inum, cow_dir->inum);
+    traverse_and_update(dirname(pathdup), dir->inum, cow_dir->inum, op);
     free(pathdup);
     //get inode above me, copy inode above, add me instad of old node
     //if root, do above process, and call add_root()
@@ -88,7 +88,11 @@ storage_init(const char* path)
     {
         // force root inode
         assert(alloc_inode() == 0);
-        add_root(0);
+
+        char op[24];
+        
+        snprintf(op, sizeof(op), "init %s", path);
+        add_root(0, op);
 
         inode* root = get_inode(0);
         root->mode = 040755; // dir
@@ -163,10 +167,10 @@ storage_write(const char* path, const char* buf, size_t size, off_t offset)
     }
 
     // get the node
-    inode* cow_node = get_inode(inum);
+    inode* node = get_inode(inum);
 
     // TODO: copy the node and work with that cow_node
-    // inode* cow_node = copy_inode(node);
+    inode* cow_node = copy_inode(node);
     printf("+ writing to page: %d\n", inum);
 
 
@@ -200,8 +204,11 @@ storage_write(const char* path, const char* buf, size_t size, off_t offset)
     }
 
 
+    char op[24];
+    snprintf(op, sizeof(op), "write %s", path);
+
     // TODO: go up the node's path and update everything to be a new version
-    // traverse_and_update(path, node->inum, cow_node->inum);
+    traverse_and_update(path, node->inum, cow_node->inum, op);
 
     return size;
 }
@@ -466,7 +473,7 @@ storage_list(const char* path)
         char* curr_name = curr->data;
 
         // cons the current child to the result
-        printf("base: '%s' curr:'%s'\n", path, curr->data);
+        // printf("base: '%s' curr:'%s'\n", path, curr->data);
 
 
         // If thhe current child is a directory, we will
@@ -486,19 +493,11 @@ storage_list(const char* path)
         }
 
         if(inode_is_dir(curr_inode)) {
-            printf("\t new base: '%s'\n", child_path);
-
-            // slist* childdir_list = storage_list(child_path);
-            // while(childdir_list) {
-            //     char* full_name = strcat(child_path, childdir_list->data);
-            //     result = s_cons(full_name, result);
-            //     childdir_list = childdir_list->next;
-            // }
-
+            // printf("\t new base: '%s'\n", child_path);
             result = s_concat(storage_list(child_path), result);
         }
 
-        result = s_cons(child_path, result);
+        result = s_cons(++child_path, result);
 
         curr = curr->next;
     }

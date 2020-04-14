@@ -166,7 +166,7 @@ directory_list(const char* path)
     {
         // add this entry to the list of names
         char* first = entries[ii].name;
-        printf("dir_list: entry %d: '%s'\n", ii, first);
+        // printf("dir_list: entry %d: '%s'\n", ii, first);
         names = s_cons(first, names);
     }
 

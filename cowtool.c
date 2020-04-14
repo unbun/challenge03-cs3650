@@ -8,6 +8,7 @@
 #include "storage.h"
 #include "slist.h"
 #include "util.h"
+#include "root_list.h"
 
 slist*
 image_ls_tree(const char* base)
@@ -64,7 +65,12 @@ main(int argc, char* argv[])
     }
 
     if (streq(cmd, "versions")) {
-        // TODO: implement
+        slist* xs = rootlist_version_table();
+        for (slist* it = xs; it != 0; it = it->next) {
+            printf("%s\n", it->data);
+        }
+        s_free(xs);
+        return 0;
         return 0;
     }
 

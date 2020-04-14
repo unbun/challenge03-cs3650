@@ -72,23 +72,27 @@ get_inode(int inum)
 inode* 
 copy_inode(inode* node)
 {
-    int new_inum = alloc_inode();
-    inode* new_inode  = get_inode(new_inum);
+    printf("+ copy_inode(%d) -> ... \n", node->inum);
 
-    new_inode->refs = node->refs;
-    new_inode->mode = node->mode;
-    assert(new_inode->mode == node->mode);
-    grow_inode(new_inode, node->size);
+    int new_inum = alloc_inode();
+    inode* new_node  = get_inode(new_inum);
+
+    new_node->refs = node->refs;
+    new_node->mode = node->mode;
+    assert(new_node->mode == node->mode);
+    grow_inode(new_node, node->size);
     
-    memcpy(pages_get_page(new_inode->ptrs[0]), pages_get_page(node->ptrs[0]), node->size);
+    memcpy(pages_get_page(new_node->ptrs[0]), pages_get_page(node->ptrs[0]), node->size);
 
     //TODO: MAYBE CHANGE THIS
-    new_inode->iptr = node->iptr;
+    new_node->iptr = node->iptr;
 
-    new_inode->ts[0] = node->ts[0];
-    new_inode->ts[1] = node->ts[1];
+    new_node->ts[0] = node->ts[0];
+    new_node->ts[1] = node->ts[1];
 
-    return new_inode;
+    printf("... end of copy_inode(%d) -> %d\n", node->inum, new_node->inum);
+
+    return new_node;
 }
 
 
