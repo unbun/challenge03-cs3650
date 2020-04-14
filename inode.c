@@ -64,7 +64,9 @@ copy_inode(inode* node, int size)
     printf("+ copy_inode(%d) -> ... \n", node->inum);
     
     int new_inum = alloc_inode();
-    inode* new_node  = get_inode(new_inum);
+    assert(new_inum > 0);
+    
+        inode* new_node  = get_inode(new_inum);
 
     
     // this will allocate new page data
@@ -75,9 +77,9 @@ copy_inode(inode* node, int size)
     void* page0_new = pages_get_page(new_node->ptrs[0]);
     memcpy(page0_new, page0_old, size); // What should size be?
 
-    void* page1_old = pages_get_page(node->ptrs[1]);
-    void* page1_new = pages_get_page(new_node->ptrs[1]);
-    memcpy(page1_new, page1_old, size); // What should size be?
+    //void* page1_old = pages_get_page(node->ptrs[1]);
+    //void* page1_new = pages_get_page(new_node->ptrs[1]);
+    //memcpy(page1_new, page1_old, size); // What should size be?
 
     //TODO: MAYBE CHANGE THIS
     new_node->iptr = node->iptr;
@@ -92,25 +94,6 @@ copy_inode(inode* node, int size)
     printf("... end of copy_inode(%d) -> %d\n", node->inum, new_node->inum);
 
     return new_node;
-}
-
-int
-find_last_root()
-{
-    assert(inodes_base);
-
-    void* ibm = get_inode_bitmap();
-
-    for (int ii = 0; ii < INODE_COUNT; ++ii)
-    {
-        inode* curr = get_inode(ii);
-        if(curr->is_root) {
-            return ii;
-        }
-    }
-
-    // return 0;
-    return -1;
 }
 
 int

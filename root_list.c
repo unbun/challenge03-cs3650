@@ -9,57 +9,93 @@
 #include "inode.h"
 #include "root_list.h"
 
-inode* root_list[HISTORY_SIZE] = { 0 };
+
+/*
+struct cow_version {
+    int vnum;
+    int root_inode_num;
+    char note[24];
+}
+*/
+
+void* roots_base = 0; // the indices are the version numbers
+const int ROOT_COUNT = 4096 / sizeof(cow_version);
+const int ROOTS_BASE_PAGE = 2;
 
 //after calling this, root_list should be set up
 void
 root_init(int new_disk)
 {
+    printf("+ root_init(%d) -> %d\n", new_disk, ROOTS_BASE_PAGE);
 
-    int rnum = 0;
-    if(!new_disk) {
-        rnum = find_last_root();
-    }
-
-    if(!bitmap_get(get_inode_bitmap(), rnum)) {
-        assert(alloc_inode() == rnum);
-
-        inode* rootii = get_inode(rnum);
-        rootii->mode = 040755;
-    }
-    else 
+    if (!bitmap_get(get_pages_bitmap(), ROOTS_BASE_PAGE))
     {
-        assert(get_inode(rnum)->mode != rnum);
+        // allocate the page for the root list
+        int page = alloc_page();
+        assert(page == ROOTS_BASE_PAGE);
+        assert(roots_base = pages_get_page(page));
     }
-    
-    root_list[0] = get_inode(rnum);
-    root_list[0]->is_root = 1;
-
+    else
+    {
+        // set the start of the inodes
+        roots_base = pages_get_page(ROOTS_BASE_PAGE);
+    }
 }
 
-inode*
-get_root_inode(){
-    return get_inode(get_current_root());
+cow_version*
+get_root(int vnum)
+{
+    // max amount of inodes is 4096
+    // assert(inum * sizeof(inode) < 4096);
+    return (cow_version*)roots_base + vnum;
 }
 
+int
+alloc_root(char* op, char* path)
+{
+    int new_root = alloc_inode();
+    if (new_root < 0) {
+        return new_root;
+    }
+
+    int vnum = get_current_version() + 1;
+
+    // push the base down one
+    cow_version* push_base = (cow_version*)roots_base + 1;
+    roots_base = push_base;
+
+    cow_version* new_version = get_root(0);// the new_roots base
+
+    new_version->vnum = vnum;
+    new_version->root_inum = new_root;
+
+    char* note = strcat(op, " ");
+    note = strcat(note, path);
+    strcpy(new_version->note, note);
+
+
+    assert(roots_base == pages_get_page(2));
+
+    return vnum; // or new_root ???
+}
 
 //gets the inum of the current root
 int
-get_current_root(){
-    return root_list[0]->inum;
+get_current_root_inum()
+{
+    return get_root(0)->root_inum;
 }
 
-//push_back onto root stack
+//gets the current version number
+int
+get_current_version()
+{
+    return get_root(0)->vnum;
+}
+
 void
-add_root(inode* rnode) {
-    printf("+ add_root(%d)\n", rnode->inum);
-
-
-    for (int ii = HISTORY_SIZE - 1; ii > 0; --ii) {
-        root_list[ii] = root_list[ii - 1];
-    }
-
-    root_list[0]->is_root = 0;
-    root_list[0] = rnode;
-    root_list[0]->is_root = 1;
+clean_history(int history_size)
+{
+    cow_version* not_needed = get_root(history_size);
+    free(not_needed);
 }

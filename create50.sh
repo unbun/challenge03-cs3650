@@ -15,3 +15,5 @@ for i in {1..50}
 do
    cat numbers/$i.txt
 done
+
+cd ..

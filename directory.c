@@ -79,14 +79,14 @@ tree_lookup(const char* path)
 {
 
     if (streq(path, "/")) {
-        return get_current_root();
+        return get_current_root_inum();
     }
 
     path++; //skip the root for s_split
     slist* curr_level = s_split(path, '/'); // get an iterable list of the levels in the path
 
     // start traversing the path at the root
-    int curr_inum = get_current_root();
+    int curr_inum = get_current_root_inum();
     while(1) {
 
         // update the current inum to be the next directory/item in the path

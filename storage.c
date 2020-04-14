@@ -47,7 +47,7 @@ traverse_and_update(const char *path, int old_inum, int new_inum)
     if(streq(path, "/")) {
         // I am a new root
         inode* new_root = get_inode(new_inum);
-        add_root(new_root);
+        alloc_root("op_filler", "path_filler");
         return 0;
     }
 
@@ -90,7 +90,7 @@ storage_init(const char* path, int create)
     pages_init(path); // alloc page 0 for bitmaps
     inode_init();     // should alloc page 1 for inodes if needed
 
-    root_init(create);      // should alloc_inodes 0-6 for the root inodes
+    root_init(create);      // should alloc a page for roots
 }
 
 int
