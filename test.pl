@@ -201,7 +201,7 @@ ok(!-d "mnt/numbers", "numbers dir doesn't exist after umount");
 mount();
 
 my $mm = `ls mnt/numbers | wc -l`;
-ok($mm == 41, "deleted 4 files");
+ok($mm == 46, "deleted 4 files");
 
 unmount();
 

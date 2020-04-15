@@ -1,14 +1,4 @@
-gcc -g `pkg-config fuse --cflags` -c -o slist.o slist.c
-gcc -g `pkg-config fuse --cflags` -c -o inode.o inode.c
-gcc -g `pkg-config fuse --cflags` -c -o root_list.o root_list.c
-gcc -g `pkg-config fuse --cflags` -c -o pages.o pages.c
-gcc -g `pkg-config fuse --cflags` -c -o bitmap.o bitmap.c
-gcc -g `pkg-config fuse --cflags` -c -o cowmount.o cowmount.c
-gcc -g `pkg-config fuse --cflags` -c -o storage.o storage.c
-gcc -g `pkg-config fuse --cflags` -c -o directory.o directory.c
-gcc  -o cowmount slist.o inode.o root_list.o pages.o bitmap.o cowmount.o storage.o directory.o `pkg-config fuse --libs` -lbsd
-gcc -g `pkg-config fuse --cflags` -c -o cowtool.o cowtool.c
-gcc  -o cowtool slist.o inode.o root_list.o pages.o cowtool.o bitmap.o storage.o directory.o `pkg-config fuse --libs` -lbsd
+make: Nothing to be done for 'all'.
 make disk0.cow
 make[1]: Entering directory '/home/unnas/personal/systems/ch03/challenge03-cs3650'
 mkdir -p mnt || true
@@ -39,6 +29,16 @@ getattr(/) -> (0) {mode: 40755, size: 0}
 + storage_stat(/)
 getattr(/) -> (0) {mode: 40755, size: 0}
 readdir(/) -> 0
++ storage_stat(/)
+getattr(/) -> (0) {mode: 40755, size: 0}
++ storage_stat(/)
+getattr(/) -> (0) {mode: 40755, size: 0}
+readdir(/) -> 0
++ storage_stat(/)
+getattr(/) -> (0) {mode: 40755, size: 0}
++ storage_stat(/)
+getattr(/) -> (0) {mode: 40755, size: 0}
+readdir(/) -> 0
 + storage_stat(/.xdg-volume-info)
 getattr(/.xdg-volume-info) -> (-2) {mode: 0000, size: 0}
 + storage_stat(/autorun.inf)
@@ -55,17 +55,11 @@ getattr(/) -> (0) {mode: 40755, size: 0}
 readdir(/) -> 0
 + storage_stat(/)
 getattr(/) -> (0) {mode: 40755, size: 0}
-readdir(/) -> 0
-+ storage_stat(/)
-getattr(/) -> (0) {mode: 40755, size: 0}
 + storage_stat(/)
 getattr(/) -> (0) {mode: 40755, size: 0}
 readdir(/) -> 0
 + storage_stat(/)
 getattr(/) -> (0) {mode: 40755, size: 0}
-+ storage_stat(/)
-getattr(/) -> (0) {mode: 40755, size: 0}
-readdir(/) -> 0
 + storage_stat(/)
 getattr(/) -> (0) {mode: 40755, size: 0}
 readdir(/) -> 0
@@ -166,6 +160,8 @@ getattr(/) -> (0) {mode: 40755, size: 0}
 readdir(/) -> 0
 + storage_stat(/autorun.inf)
 getattr(/autorun.inf) -> (-2) {mode: 0000, size: 0}
++ storage_stat(/)
+getattr(/) -> (0) {mode: 40755, size: 0}
 + storage_stat(/)
 getattr(/) -> (0) {mode: 40755, size: 0}
 + storage_stat(/)
@@ -234,11 +230,6 @@ node_0{ptrs: [6, 0], indir:0 size: 32}
 + add_root(3, write /one.txt) -> ...
 ... new version: -> 2 
 write(/one.txt, 11 bytes, @+0) -> 11
-+ storage_stat(/)
-getattr(/) -> (0) {mode: 40755, size: 32}
-+ storage_stat(/)
-getattr(/) -> (0) {mode: 40755, size: 32}
-readdir(/) -> 0
 + storage_stat(/one.txt)
 getattr(/one.txt) -> (0) {mode: 100664, size: 11}
 + storage_stat(/one.txt)
@@ -248,6 +239,8 @@ ioctl(/one.txt, 21505, ...) -> -1
 + storage_read(/one.txt); inode 2
 node_2{ptrs: [7, 0], indir:0 size: 11}
 read(/one.txt, 4096 bytes, @+0) -> 11
++ storage_stat(/)
+getattr(/) -> (0) {mode: 40755, size: 32}
 + storage_stat(/one.txt)
 getattr(/one.txt) -> (0) {mode: 100664, size: 11}
 + storage_stat(/two.txt)
@@ -282,13 +275,13 @@ node_3{ptrs: [8, 0], indir:0 size: 64}
 + add_root(6, write /two.txt) -> ...
 ... new version: -> 3 
 write(/two.txt, 11 bytes, @+0) -> 11
-+ storage_stat(/two.txt)
-getattr(/two.txt) -> (0) {mode: 100664, size: 11}
-+ storage_stat(/)
-getattr(/) -> (0) {mode: 40755, size: 64}
 + storage_stat(/)
 getattr(/) -> (0) {mode: 40755, size: 64}
 readdir(/) -> 0
++ storage_stat(/two.txt)
+getattr(/two.txt) -> (0) {mode: 100664, size: 11}
++ storage_stat(/two.txt)
+getattr(/two.txt) -> (0) {mode: 100664, size: 11}
 + storage_stat(/two.txt)
 access(/two.txt, 0000) -> 0
 open(/two.txt) -> 0
@@ -296,8 +289,6 @@ ioctl(/two.txt, 21505, ...) -> -1
 + storage_read(/two.txt); inode 5
 node_5{ptrs: [9, 0], indir:0 size: 11}
 read(/two.txt, 4096 bytes, @+0) -> 11
-+ storage_stat(/two.txt)
-getattr(/two.txt) -> (0) {mode: 100664, size: 11}
 + storage_stat(/two.txt)
 getattr(/two.txt) -> (0) {mode: 100664, size: 11}
 + storage_stat(/)
@@ -311,10 +302,10 @@ getattr(/) -> (0) {mode: 40755, size: 64}
 getattr(/) -> (0) {mode: 40755, size: 64}
 readdir(/) -> 0
 + storage_stat(/2k.txt)
-getattr(/2k.txt) -> (-2) {mode: 0000, size: 0}
+getattr(/2k.txt) -> (-2) {mode: 00fusermount -u mnt || true
+00, size: 0}
 + mknod (/2k.txt, 33204)
-+ afusermount -u mnt || true
-lloc_inode() -> 7
++ alloc_inode() -> 7
 + grow_inode( ... , 96) 
 node_6{ptrs: [10, 0], indir:0 size: 64}
 + dirent_7 = '2k.txt'
@@ -343,27 +334,27 @@ node_6{ptrs: [10, 0], indir:0 size: 96}
 + add_root(9, write /2k.txt) -> ...
 ... new version: -> 4 
 write(/2k.txt, 2001 bytes, @+0) -> 2001
++ storage_stat(/)
+getattr(/) -> (0) {mode: 40755, size: 96}
 + storage_stat(/2k.txt)
 access(/2k.txt, 0000) -> 0
 open(/2k.txt) -> 0
 ioctl(/2k.txt, 21505, ...) -> -1
 + storage_stat(/)
 getattr(/) -> (0) {mode: 40755, size: 96}
+readdir(/) -> 0
 + storage_stat(/2k.txt)
 getattr(/2k.txt) -> (0) {mode: 100664, size: 2001}
-+ storage_stat(/)
-getattr(/) -> (0) {mode: 40755, size: 96}
-readdir(/) -> 0
 + storage_read(/2k.txt); inode 8
 node_8{ptrs: [11, 0], indir:0 size: 2001}
 read(/2k.txt, 4096 bytes, @+0) -> 2001
 + storage_stat(/2k.txt)
 getattr(/2k.txt) -> (0) {mode: 100664, size: 2001}
++ storage_stat(/)
+getattr(/) -> (0) {mode: 40755, size: 96}
 + storage_stat(/2k.txt)
 access(/2k.txt, 0000) -> 0
 open(/2k.txt) -> 0
-+ storage_stat(/)
-getattr(/) -> (0) {mode: 40755, size: 96}
 ioctl(/2k.txt, 21505, ...) -> -1
 + storage_read(/2k.txt); inode 8
 node_8{ptrs: [11, 0], indir:0 size: 2001}
@@ -383,9 +374,9 @@ make[1]: Leaving directory '/home/unnas/personal/systems/ch03/challenge03-cs3650
 + storage_init(disk0.cow);
 + root_init() -> 1
 + storage_stat(/)
-access(/, 0004) -> 0
-+ storage_stat(/)
 getattr(/) -> (0) {mode: 40755, size: 96}
++ storage_stat(/)
+access(/, 0004) -> 0
 + storage_stat(/.Trash)
 getattr(/.Trash) -> (-2) {mode: 0000, size: 0}
 + storage_stat(/.Trash-1000)
@@ -705,14 +696,14 @@ node_9{ptrs: [12, 0], indir:0 size: 96}
 write(/foo/abc.txt, 11 bytes, @+0) -> 11
 + storage_stat(/def.txt)
 getattr(/def.txt) -> (0) {mode: 100664, size: 11}
++ storage_stat(/)
+getattr(/) -> (0) {mode: 40755, size: 96}
 + storage_stat(/foo/abc.txt)
 access(/foo/abc.txt, 0000) -> 0
 open(/foo/abc.txt) -> 0
 ioctl(/foo/abc.txt, 21505, ...) -> -1
 + storage_stat(/foo/abc.txt)
 getattr(/foo/abc.txt) -> (0) {mode: 100664, size: 11}
-+ storage_stat(/)
-getattr(/) -> (0) {mode: 40755, size: 96}
 + storage_read(/foo/abc.txt); inode 11
 node_11{ptrs: [13, 0], indir:0 size: 11}
 read(/foo/abc.txt, 4096 bytes, @+0) -> 11
@@ -1815,8 +1806,6 @@ getattr(/numbers/5.num) -> (0) {mode: 100664, size: 0}
 access(/numbers/5.num, 0000) -> 0
 open(/numbers/5.num) -> 0
 ioctl(/numbers/5.num, 21505, ...) -> -1
-+ storage_stat(/)
-getattr(/) -> (0) {mode: 40755, size: 192}
 + alloc_inode() -> 13
 + copy( 10{size=0) ) ...
 node_10{ptrs: [15, 52], indir:53 size: 0}
@@ -2036,6 +2025,8 @@ node_32{ptrs: [86, 0], indir:0 size: 0}
 + traverse_and_free ({write /dir1/dir2/dir3/d r=32}, {write /numbers/1.num}) -> 0
 ... new version: -> 23 
 write(/numbers/7.num, 2 bytes, @+0) -> 2
++ storage_stat(/)
+getattr(/) -> (0) {mode: 40755, size: 192}
 + storage_stat(/numbers/8.num)
 getattr(/numbers/8.num) -> (-2) {mode: 0000, size: 0}
 + mknod (/numbers/8.num, 33204)
@@ -5063,12 +5054,12 @@ make[1]: Leaving directory '/home/unnas/personal/systems/ch03/challenge03-cs3650
 + root_init() -> 1
 + storage_stat(/)
 access(/, 0004) -> 0
-+ storage_stat(/)
-getattr(/) -> (0) {mode: 40755, size: 192}
 + storage_stat(/.Trash)
 getattr(/.Trash) -> (-2) {mode: 0000, size: 0}
 + storage_stat(/.Trash-1000)
 getattr(/.Trash-1000) -> (-2) {mode: 0000, size: 0}
++ storage_stat(/)
+getattr(/) -> (0) {mode: 40755, size: 192}
 + storage_stat(/.xdg-volume-info)
 getattr(/.xdg-volume-info) -> (-2) {mode: 0000, size: 0}
 + storage_stat(/autorun.inf)
@@ -5638,6 +5629,8 @@ make[1]: Leaving directory '/home/unnas/personal/systems/ch03/challenge03-cs3650
 + storage_init(disk0.cow);
 + root_init() -> 1
 + storage_stat(/)
+getattr(/) -> (0) {mode: 40755, size: 0}
++ storage_stat(/)
 access(/, 0004) -> 0
 + storage_stat(/.Trash)
 getattr(/.Trash) -> (-2) {mode: 0000, size: 0}
@@ -5645,8 +5638,6 @@ getattr(/.Trash) -> (-2) {mode: 0000, size: 0}
 getattr(/.Trash-1000) -> (-2) {mode: 0000, size: 0}
 + storage_stat(/.xdg-volume-info)
 getattr(/.xdg-volume-info) -> (-2) {mode: 0000, size: 0}
-+ storage_stat(/)
-getattr(/) -> (0) {mode: 40755, size: 0}
 + storage_stat(/autorun.inf)
 getattr(/autorun.inf) -> (-2) {mode: 0000, size: 0}
 + storage_stat(/)
@@ -5762,10 +5753,10 @@ getattr(/) -> (0) {mode: 40755, size: 0}
 + storage_stat(/)
 getattr(/) -> (0) {mode: 40755, size: 0}
 readdir(/) -> 0
-+ storage_stat(/)
-getattr(/) -> (0) {mode: 40755, size: 0}
 + storage_stat(/autorun.inf)
 getattr(/autorun.inf) -> (-2) {mode: 0000, size: 0}
++ storage_stat(/)
+getattr(/) -> (0) {mode: 40755, size: 0}
 + storage_stat(/)
 getattr(/) -> (0) {mode: 40755, size: 0}
 readdir(/) -> 0
@@ -5884,9 +5875,9 @@ getattr(/x4.txt) -> (0) {mode: 100664, size: 0}
 + storage_stat(/x4.txt)
 access(/x4.txt, 0000) -> 0
 open(/x4.txt) -> 0
+ioctl(/x4.txt, 21505, ...) -> -1
 + storage_stat(/)
 getattr(/) -> (0) {mode: 40755, size: 128}
-ioctl(/x4.txt, 21505, ...) -> -1
 + alloc_inode() -> 11
 + copy( 10{size=0) ) ...
 node_10{ptrs: [0, 0], indir:0 size: 0}
@@ -5948,9 +5939,9 @@ make[1]: Leaving directory '/home/unnas/personal/systems/ch03/challenge03-cs3650
 + storage_init(disk0.cow);
 + root_init() -> 1
 + storage_stat(/)
-getattr(/) -> (0) {mode: 40755, size: 160}
-+ storage_stat(/)
 access(/, 0004) -> 0
++ storage_stat(/)
+getattr(/) -> (0) {mode: 40755, size: 160}
 + storage_stat(/.Trash)
 getattr(/.Trash) -> (-2) {mode: 0000, size: 0}
 + storage_stat(/.Trash-1000)
@@ -6135,10 +6126,10 @@ access(/, 0004) -> 0
 getattr(/.Trash) -> (-2) {mode: 0000, size: 0}
 + storage_stat(/.Trash-1000)
 getattr(/.Trash-1000) -> (-2) {mode: 0000, size: 0}
-+ storage_stat(/.xdg-volume-info)
-getattr(/.xdg-volume-info) -> (-2) {mode: 0000, size: 0}
 + storage_stat(/)
 getattr(/) -> (0) {mode: 40755, size: 128}
++ storage_stat(/.xdg-volume-info)
+getattr(/.xdg-volume-info) -> (-2) {mode: 0000, size: 0}
 + storage_stat(/autorun.inf)
 getattr(/autorun.inf) -> (-2) {mode: 0000, size: 0}
 + storage_stat(/)
@@ -6297,13 +6288,13 @@ make[1]: Leaving directory '/home/unnas/personal/systems/ch03/challenge03-cs3650
 + storage_init(disk0.cow);
 + root_init() -> 1
 + storage_stat(/)
-getattr(/) -> (0) {mode: 40755, size: 128}
-+ storage_stat(/)
 access(/, 0004) -> 0
 + storage_stat(/.Trash)
 getattr(/.Trash) -> (-2) {mode: 0000, size: 0}
 + storage_stat(/.Trash-1000)
 getattr(/.Trash-1000) -> (-2) {mode: 0000, size: 0}
++ storage_stat(/)
+getattr(/) -> (0) {mode: 40755, size: 128}
 + storage_stat(/.xdg-volume-info)
 getattr(/.xdg-volume-info) -> (-2) {mode: 0000, size: 0}
 + storage_stat(/autorun.inf)
@@ -6427,8 +6418,6 @@ getattr(/autorun.inf) -> (-2) {mode: 0000, size: 0}
 getattr(/) -> (0) {mode: 40755, size: 128}
 + storage_stat(/)
 getattr(/) -> (0) {mode: 40755, size: 128}
-+ storage_stat(/)
-getattr(/) -> (0) {mode: 40755, size: 128}
 readdir(/) -> 0
 + storage_stat(/x5.txt)
 getattr(/x5.txt) -> (0) {mode: 100664, size: 8}
@@ -6436,10 +6425,10 @@ getattr(/x5.txt) -> (0) {mode: 100664, size: 8}
 getattr(/x3.txt) -> (0) {mode: 100664, size: 8}
 + storage_stat(/x2.txt)
 getattr(/x2.txt) -> (0) {mode: 100664, size: 8}
-+ storage_stat(/xfusermount -u mnt || true
-1.txt)
++ storage_stat(/x1.txt)
 getattr(/x1.txt) -> (0) {mode: 100664, size: 8}
-+ storage_stat(/)
++ storfusermount -u mnt || true
+age_stat(/)
 getattr(/) -> (0) {mode: 40755, size: 128}
 + storage_stat(/)
 getattr(/) -> (0) {mode: 40755, size: 128}
@@ -6496,13 +6485,13 @@ make[1]: Leaving directory '/home/unnas/personal/systems/ch03/challenge03-cs3650
 + storage_init(disk0.cow);
 + root_init() -> 1
 + storage_stat(/)
+getattr(/) -> (0) {mode: 40755, size: 160}
++ storage_stat(/)
 access(/, 0004) -> 0
 + storage_stat(/.Trash)
 getattr(/.Trash) -> (-2) {mode: 0000, size: 0}
 + storage_stat(/.Trash-1000)
 getattr(/.Trash-1000) -> (-2) {mode: 0000, size: 0}
-+ storage_stat(/)
-getattr(/) -> (0) {mode: 40755, size: 160}
 + storage_stat(/.xdg-volume-info)
 getattr(/.xdg-volume-info) -> (-2) {mode: 0000, size: 0}
 + storage_stat(/autorun.inf)
@@ -6718,13 +6707,13 @@ make[1]: Leaving directory '/home/unnas/personal/systems/ch03/challenge03-cs3650
 + storage_init(disk0.cow);
 + root_init() -> 1
 + storage_stat(/)
+getattr(/) -> (0) {mode: 40755, size: 160}
++ storage_stat(/)
 access(/, 0004) -> 0
 + storage_stat(/.Trash)
 getattr(/.Trash) -> (-2) {mode: 0000, size: 0}
 + storage_stat(/.Trash-1000)
 getattr(/.Trash-1000) -> (-2) {mode: 0000, size: 0}
-+ storage_stat(/)
-getattr(/) -> (0) {mode: 40755, size: 160}
 + storage_stat(/.xdg-volume-info)
 getattr(/.xdg-volume-info) -> (-2) {mode: 0000, size: 0}
 + storage_stat(/autorun.inf)
@@ -6894,13 +6883,13 @@ make[1]: Leaving directory '/home/unnas/personal/systems/ch03/challenge03-cs3650
 + storage_init(disk0.cow);
 + root_init() -> 1
 + storage_stat(/)
+getattr(/) -> (0) {mode: 40755, size: 160}
++ storage_stat(/)
 access(/, 0004) -> 0
 + storage_stat(/.Trash)
 getattr(/.Trash) -> (-2) {mode: 0000, size: 0}
 + storage_stat(/.Trash-1000)
 getattr(/.Trash-1000) -> (-2) {mode: 0000, size: 0}
-+ storage_stat(/)
-getattr(/) -> (0) {mode: 40755, size: 160}
 + storage_stat(/.xdg-volume-info)
 getattr(/.xdg-volume-info) -> (-2) {mode: 0000, size: 0}
 + storage_stat(/autorun.inf)
@@ -7074,6 +7063,11 @@ read(/y2.txt, 4096 bytes, @+0) -> 8
 getattr(/y2.txt) -> (0) {mode: 100664, size: 8}
 + storage_stat(/)
 getattr(/) -> (0) {mode: 40755, size: 192}
++ storage_stat(/)
+getattr(/) -> (0) {mode: 40755, size: 192}
+readdir(/) -> 0
++ storage_stat(/.gitignore)
+getattr(/.gitignore) -> (-2) {mode: 0000, size: 0}
 make disk0.cow
 make[1]: Entering directory '/home/unnas/personal/systems/ch03/challenge03-cs3650'
 make[1]: 'disk0.cow' is up to date.
@@ -7091,118 +7085,6 @@ getattr(/.Trash-1000) -> (-2) {mode: 0000, size: 0}
 getattr(/) -> (0) {mode: 40755, size: 192}
 + storage_stat(/.xdg-volume-info)
 getattr(/.xdg-volume-info) -> (-2) {mode: 0000, size: 0}
-+ storage_stat(/autorun.inf)
-getattr(/autorun.inf) -> (-2) {mode: 0000, size: 0}
-+ storage_stat(/)
-getattr(/) -> (0) {mode: 40755, size: 192}
-readdir(/) -> 0
-+ storage_stat(/)
-getattr(/) -> (0) {mode: 40755, size: 192}
-+ storage_stat(/)
-getattr(/) -> (0) {mode: 40755, size: 192}
-readdir(/) -> 0
-+ storage_stat(/)
-getattr(/) -> (0) {mode: 40755, size: 192}
-+ storage_stat(/)
-getattr(/) -> (0) {mode: 40755, size: 192}
-readdir(/) -> 0
-+ storage_stat(/)
-getattr(/) -> (0) {mode: 40755, size: 192}
-+ storage_stat(/)
-getattr(/) -> (0) {mode: 40755, size: 192}
-readdir(/) -> 0
-+ storage_stat(/)
-getattr(/) -> (0) {mode: 40755, size: 192}
-+ storage_stat(/)
-getattr(/) -> (0) {mode: 40755, size: 192}
-readdir(/) -> 0
-+ storage_stat(/)
-getattr(/) -> (0) {mode: 40755, size: 192}
-+ storage_stat(/)
-getattr(/) -> (0) {mode: 40755, size: 192}
-readdir(/) -> 0
-+ storage_stat(/)
-getattr(/) -> (0) {mode: 40755, size: 192}
-+ storage_stat(/)
-getattr(/) -> (0) {mode: 40755, size: 192}
-readdir(/) -> 0
-+ storage_stat(/)
-getattr(/) -> (0) {mode: 40755, size: 192}
-+ storage_stat(/)
-getattr(/) -> (0) {mode: 40755, size: 192}
-readdir(/) -> 0
-+ storage_stat(/)
-getattr(/) -> (0) {mode: 40755, size: 192}
-+ storage_stat(/)
-getattr(/) -> (0) {mode: 40755, size: 192}
-readdir(/) -> 0
-+ storage_stat(/)
-getattr(/) -> (0) {mode: 40755, size: 192}
-+ storage_stat(/)
-getattr(/) -> (0) {mode: 40755, size: 192}
-readdir(/) -> 0
-+ storage_stat(/)
-getattr(/) -> (0) {mode: 40755, size: 192}
-+ storage_stat(/)
-getattr(/) -> (0) {mode: 40755, size: 192}
-readdir(/) -> 0
-+ storage_stat(/)
-getattr(/) -> (0) {mode: 40755, size: 192}
-+ storage_stat(/)
-getattr(/) -> (0) {mode: 40755, size: 192}
-readdir(/) -> 0
-+ storage_stat(/)
-getattr(/) -> (0) {mode: 40755, size: 192}
-+ storage_stat(/)
-getattr(/) -> (0) {mode: 40755, size: 192}
-readdir(/) -> 0
-+ storage_stat(/)
-getattr(/) -> (0) {mode: 40755, size: 192}
-+ storage_stat(/)
-getattr(/) -> (0) {mode: 40755, size: 192}
-readdir(/) -> 0
-+ storage_stat(/)
-getattr(/) -> (0) {mode: 40755, size: 192}
-+ storage_stat(/)
-getattr(/) -> (0) {mode: 40755, size: 192}
-readdir(/) -> 0
-+ storage_stat(/)
-getattr(/) -> (0) {mode: 40755, size: 192}
-+ storage_stat(/)
-getattr(/) -> (0) {mode: 40755, size: 192}
-readdir(/) -> 0
-+ storage_stat(/)
-getattr(/) -> (0) {mode: 40755, size: 192}
-+ storage_stat(/)
-getattr(/) -> (0) {mode: 40755, size: 192}
-readdir(/) -> 0
-+ storage_stat(/)
-getattr(/) -> (0) {mode: 40755, size: 192}
-+ storage_stat(/)
-getattr(/) -> (0) {mode: 40755, size: 192}
-readdir(/) -> 0
-+ storage_stat(/)
-getattr(/) -> (0) {mode: 40755, size: 192}
-+ storage_stat(/)
-getattr(/) -> (0) {mode: 40755, size: 192}
-readdir(/) -> 0
-+ storage_stat(/)
-getattr(/) -> (0) {mode: 40755, size: 192}
-+ storage_stat(/)
-getattr(/) -> (0) {mode: 40755, size: 192}
-readdir(/) -> 0
-+ storage_stat(/)
-getattr(/) -> (0) {mode: 40755, size: 192}
-+ storage_stat(/)
-getattr(/) -> (0) {mode: 40755, size: 192}
-readdir(/) -> 0
-+ storage_stat(/)
-getattr(/) -> (0) {mode: 40755, size: 192}
-+ storage_stat(/)
-getattr(/) -> (0) {mode: 40755, size: 192}
-readdir(/) -> 0
-+ storage_stat(/)
-getattr(/) -> (0) {mode: 40755, size: 192}
 + storage_stat(/)
 getattr(/) -> (0) {mode: 40755, size: 192}
 readdir(/) -> 0
@@ -7210,6 +7092,116 @@ readdir(/) -> 0
 getattr(/autorun.inf) -> (-2) {mode: 0000, size: 0}
 + storage_stat(/)
 getattr(/) -> (0) {mode: 40755, size: 192}
++ storage_stat(/)
+getattr(/) -> (0) {mode: 40755, size: 192}
+readdir(/) -> 0
++ storage_stat(/)
+getattr(/) -> (0) {mode: 40755, size: 192}
++ storage_stat(/)
+getattr(/) -> (0) {mode: 40755, size: 192}
+readdir(/) -> 0
++ storage_stat(/)
+getattr(/) -> (0) {mode: 40755, size: 192}
++ storage_stat(/)
+getattr(/) -> (0) {mode: 40755, size: 192}
+readdir(/) -> 0
++ storage_stat(/)
+getattr(/) -> (0) {mode: 40755, size: 192}
++ storage_stat(/)
+getattr(/) -> (0) {mode: 40755, size: 192}
+readdir(/) -> 0
++ storage_stat(/)
+getattr(/) -> (0) {mode: 40755, size: 192}
++ storage_stat(/)
+getattr(/) -> (0) {mode: 40755, size: 192}
+readdir(/) -> 0
++ storage_stat(/)
+getattr(/) -> (0) {mode: 40755, size: 192}
++ storage_stat(/)
+getattr(/) -> (0) {mode: 40755, size: 192}
+readdir(/) -> 0
++ storage_stat(/)
+getattr(/) -> (0) {mode: 40755, size: 192}
++ storage_stat(/)
+getattr(/) -> (0) {mode: 40755, size: 192}
+readdir(/) -> 0
++ storage_stat(/)
+getattr(/) -> (0) {mode: 40755, size: 192}
++ storage_stat(/)
+getattr(/) -> (0) {mode: 40755, size: 192}
+readdir(/) -> 0
++ storage_stat(/)
+getattr(/) -> (0) {mode: 40755, size: 192}
++ storage_stat(/)
+getattr(/) -> (0) {mode: 40755, size: 192}
+readdir(/) -> 0
++ storage_stat(/)
+getattr(/) -> (0) {mode: 40755, size: 192}
++ storage_stat(/)
+getattr(/) -> (0) {mode: 40755, size: 192}
+readdir(/) -> 0
++ storage_stat(/)
+getattr(/) -> (0) {mode: 40755, size: 192}
++ storage_stat(/)
+getattr(/) -> (0) {mode: 40755, size: 192}
+readdir(/) -> 0
++ storage_stat(/)
+getattr(/) -> (0) {mode: 40755, size: 192}
++ storage_stat(/)
+getattr(/) -> (0) {mode: 40755, size: 192}
+readdir(/) -> 0
++ storage_stat(/)
+getattr(/) -> (0) {mode: 40755, size: 192}
++ storage_stat(/)
+getattr(/) -> (0) {mode: 40755, size: 192}
+readdir(/) -> 0
++ storage_stat(/)
+getattr(/) -> (0) {mode: 40755, size: 192}
++ storage_stat(/)
+getattr(/) -> (0) {mode: 40755, size: 192}
+readdir(/) -> 0
++ storage_stat(/)
+getattr(/) -> (0) {mode: 40755, size: 192}
++ storage_stat(/)
+getattr(/) -> (0) {mode: 40755, size: 192}
+readdir(/) -> 0
++ storage_stat(/)
+getattr(/) -> (0) {mode: 40755, size: 192}
++ storage_stat(/)
+getattr(/) -> (0) {mode: 40755, size: 192}
+readdir(/) -> 0
++ storage_stat(/)
+getattr(/) -> (0) {mode: 40755, size: 192}
++ storage_stat(/)
+getattr(/) -> (0) {mode: 40755, size: 192}
+readdir(/) -> 0
++ storage_stat(/)
+getattr(/) -> (0) {mode: 40755, size: 192}
++ storage_stat(/)
+getattr(/) -> (0) {mode: 40755, size: 192}
+readdir(/) -> 0
++ storage_stat(/)
+getattr(/) -> (0) {mode: 40755, size: 192}
++ storage_stat(/)
+getattr(/) -> (0) {mode: 40755, size: 192}
+readdir(/) -> 0
++ storage_stat(/)
+getattr(/) -> (0) {mode: 40755, size: 192}
++ storage_stat(/)
+getattr(/) -> (0) {mode: 40755, size: 192}
+readdir(/) -> 0
++ storage_stat(/)
+getattr(/) -> (0) {mode: 40755, size: 192}
++ storage_stat(/)
+getattr(/) -> (0) {mode: 40755, size: 192}
+readdir(/) -> 0
++ storage_stat(/)
+getattr(/) -> (0) {mode: 40755, size: 192}
++ storage_stat(/)
+getattr(/) -> (0) {mode: 40755, size: 192}
+readdir(/) -> 0
++ storage_stat(/autorun.inf)
+getattr(/autorun.inf) -> (-2) {mode: 0000, size: 0}
 + storage_stat(/)
 getattr(/) -> (0) {mode: 40755, size: 192}
 + storage_stat(/)
@@ -7242,6 +7234,13 @@ getattr(/) -> (0) {mode: 40755, size: 192}
 + storage_stat(/)
 getattr(/) -> (0) {mode: 40755, size: 192}
 readdir(/) -> 0
++ storage_stat(/)
+getattr(/) -> (0) {mode: 40755, size: 192}
++ storage_stat(/)
+getattr(/) -> (0) {mode: 40755, size: 192}
+readdir(/) -> 0
++ storage_stat(/.gitignore)
+getattr(/.gitignore) -> (-2) {mode: 0000, size: 0}
 + storage_stat(/twelve.dat)
 getattr(/twelve.dat) -> (-2) {mode: 0000, size: 0}
 + mknod (/twelve.dat, 33204)
@@ -7364,13 +7363,13 @@ pnum(9[0]): 12
 node_9{ptrs: [12, 0], indir:0 size: 0}
 + traverse_and_free ({write /x3.txt r=9}, {write /x4.txt}) -> 0
 ... new version: -> 11 
-write(/twelve.dat, 3809 bytes, @+8192) -> 3809
+write(/twelve.dat, 3809 bytes, fusermount -u mnt || true
+@+8192) -> 3809
 + storage_stat(/twelve.dat)
 access(/twelve.dat, 0000) -> 0
 open(/twelve.dat) -> 0
 ioctl(/twelve.dat, 21505, ...) -> -1
-+ storage_stat(/twelvfusermount -u mnt || true
-e.dat)
++ storage_stat(/twelve.dat)
 getattr(/twelve.dat) -> (0) {mode: 100664, size: 12001}
 + storage_read(/twelve.dat); inode 6
 node_6{ptrs: [10, 23], indir:24 size: 12001}
@@ -7385,11 +7384,11 @@ make[1]: Leaving directory '/home/unnas/personal/systems/ch03/challenge03-cs3650
 + storage_init(disk0.cow);
 + root_init() -> 1
 + storage_stat(/)
+getattr(/) -> (0) {mode: 40755, size: 224}
++ storage_stat(/)
 access(/, 0004) -> 0
 + storage_stat(/.Trash)
 getattr(/.Trash) -> (-2) {mode: 0000, size: 0}
-+ storage_stat(/)
-getattr(/) -> (0) {mode: 40755, size: 224}
 + storage_stat(/.Trash-1000)
 getattr(/.Trash-1000) -> (-2) {mode: 0000, size: 0}
 + storage_stat(/.xdg-volume-info)
@@ -7540,8 +7539,6 @@ readdir(/) -> 0
 getattr(/) -> (0) {mode: 40755, size: 224}
 + storage_stat(/)
 getattr(/) -> (0) {mode: 40755, size: 224}
-+ storage_stat(/)
-getattr(/) -> (0) {mode: 40755, size: 224}
 readdir(/) -> 0
 + storage_stat(/)
 getattr(/) -> (0) {mode: 40755, size: 224}
@@ -7609,13 +7606,13 @@ make[1]: Leaving directory '/home/unnas/personal/systems/ch03/challenge03-cs3650
 + storage_init(disk0.cow);
 + root_init() -> 1
 + storage_stat(/)
+getattr(/) -> (0) {mode: 40755, size: 224}
++ storage_stat(/)
 access(/, 0004) -> 0
 + storage_stat(/.Trash)
 getattr(/.Trash) -> (-2) {mode: 0000, size: 0}
 + storage_stat(/.Trash-1000)
 getattr(/.Trash-1000) -> (-2) {mode: 0000, size: 0}
-+ storage_stat(/)
-getattr(/) -> (0) {mode: 40755, size: 224}
 + storage_stat(/.xdg-volume-info)
 getattr(/.xdg-volume-info) -> (-2) {mode: 0000, size: 0}
 + storage_stat(/autorun.inf)
