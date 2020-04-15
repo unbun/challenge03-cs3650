@@ -68,7 +68,26 @@ sub p1ok {
     }
 }
 
-my $nfiles = 50;
+
+write_text("1.txt", "111");
+write_text("2.txt", "222");
+write_text("3.txt", "333");
+
+system("mkdir mnt/a");
+write_text("a/4.txt", "444");
+write_text("a/5.txt", "555");
+
+
+my $huge0 = "=This string is fourty characters long.=" x 1000;
+write_text("40k.txt", $huge0);
+my $huge1 = read_text("40k.txt");
+ok($huge0 eq $huge1, "Read back 40k correctly.");
+
+my $huge2 = read_text_slice("40k.txt", 10, 8050);
+my $right = "ng is four";
+ok($huge2 eq $right, "Read with offset & length");
+
+my $nfiles = 90;
 
 
 system("mkdir mnt/numbers");
@@ -89,6 +108,29 @@ for my $ii (1..$fileincr) {
     my $yy = read_text("numbers/$xx.num") || -10;
     ok($xx == $yy, "check value $xx");
 }
+
+#unmount();
+
+#mount();
+
+# system("mkdir mnt/numbersb");
+# for my $ii (1..$nfiles) {
+#     write_text("numbersb/$ii.num", "$ii");
+# }
+
+
+# my $mm = `ls mnt/numbersb | wc -l`;
+# say "# mm = '$mm'";
+
+# ok($mm == $nfiles, "created '$nfiles' files");
+
+
+# for my $ii (1..$fileincr) {
+#     my $xx = $ii * 5;
+#     my $yy = read_text("numbersb/$xx.num") || -10;
+#     ok($xx == $yy, "check value $xx");
+# }
+
 
 # for my $ii (1..5) {
 #     my $xx = $ii * 2;

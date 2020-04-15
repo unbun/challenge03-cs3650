@@ -86,13 +86,17 @@ alloc_page()
         }
     }
 
+    bitmap_print(get_pages_bitmap(), 256);
+    puts("");
+    sleep(1);
+    assert(0);
     return -1;
 }
 
 void
 free_page(int pnum)
 {
-    printf("+ free_page(%d)\n", pnum);
+    printf("+ free_page(%d)\n\n\n\n\n", pnum);
     void* pbm = get_pages_bitmap();
     bitmap_put(pbm, pnum, 0);
 }

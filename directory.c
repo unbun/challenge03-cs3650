@@ -81,6 +81,10 @@ tree_lookup_hlp(const char* path, int rnum)
     int curr_inum = rnum;
     while(1) {
         // update the current inum to be the next directory in the path
+        if(curr_inum < 0) {
+            return curr_inum;
+        }
+        
         inode* dirnode = get_inode(curr_inum);
         curr_inum = directory_lookup(dirnode, curr_level->data);
 
@@ -131,8 +135,7 @@ directory_delete(inode* dd, const char* name)
     int size = dd->size / sizeof(ddirent);
     for (int ii = 0; ii < size; ii += 1)
     {
-        // the entries of the dd don't have to be deleted, but their inodes need to
-        // to be updated to not be a reference
+        // delete only the give name
         if (streq(entries[ii].name, name))
         {
             // decr ref count
