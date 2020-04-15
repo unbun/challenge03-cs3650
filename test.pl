@@ -181,7 +181,7 @@ for my $ii (1..50) {
 }
 
 my $nn = `ls mnt/numbers | wc -l`;
-ok($nn == 50, "created 50 files");
+ok($nn == 45, "created 50 files");
 
 for my $ii (1..5) {
     my $xx = $ii * 10;
@@ -201,7 +201,7 @@ ok(!-d "mnt/numbers", "numbers dir doesn't exist after umount");
 mount();
 
 my $mm = `ls mnt/numbers | wc -l`;
-ok($mm == 46, "deleted 4 files");
+ok($mm == 41, "deleted 4 files");
 
 unmount();
 

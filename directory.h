@@ -3,7 +3,7 @@
 #ifndef DIRECTORY_HINTS_H
 #define DIRECTORY_HINTS_H
 
-#define DIR_NAME 48
+#define DIR_NAME 28
 
 #include "slist.h"
 #include "pages.h"
@@ -13,7 +13,6 @@
 typedef struct ddirent {
     char name[DIR_NAME];
     int  inum;
-    char _reserved[12];
 } ddirent;
 
 int directory_lookup(inode* dd, const char* name); // get inum of object name in the dd

@@ -26,8 +26,12 @@ typedef struct inode
 //     - maybe make a special structure for the root inode
 // will probably need to do the same stuff for static pages_fd and pages_bse
 
+#define NUM_DIRECT_PAGES 20
+
 static void* inodes_base = 0;
-const int INODE_COUNT = 4096 / sizeof(inode);
+
+
+const int INODE_COUNT = NUM_DIRECT_PAGES * (4096 / sizeof(inode));
 
 
 //after calling this, inodes_base should be set up
@@ -36,11 +40,15 @@ inode_init()
 {
     // set the page bit for the inodes
     // the inodes should be the first th2ngs after the bitmaps
-    if (!bitmap_get(get_pages_bitmap(), 1)) {
+    if (!bitmap_get(get_pages_bitmap(), 2)) {
         // allocate a page for the
         int page = alloc_page();
         assert(page == 2);
         assert(inodes_base = pages_get_page(page));
+
+        for (size_t ii=0; ii<NUM_DIRECT_PAGES - 1; ++ii) {
+            assert(alloc_page() == ii + 3);
+        }
     }
     else
     {
@@ -54,7 +62,7 @@ inode*
 get_inode(int inum)
 {
     // max amount of inodes is 4096
-    // assert(inum * sizeof(inode) < 4096);
+    //assert(inum * sizeof(inode) < (406 * 2));
     return (inode*)inodes_base + inum;
 }
 
@@ -132,6 +140,7 @@ free_inode(inode* node)
     printf("+ free_inode(%d)\n", node->inum);
     print_inode(node);
     bitmap_put(get_inode_bitmap(), node->inum, 0);
+    assert(bitmap_get(get_inode_bitmap(), node->inum) == 0);
 }
 
 // make the given node have enough blocks to fill the given size

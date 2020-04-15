@@ -85,7 +85,7 @@ add_root(int rnum, char* op)
     // garbage collection
     if(curr_vnum > 6){
         traverse_and_free(get_root_list_idx(6)->rnum, 
-            get_root_list_idx(5)->op);
+            get_root_list_idx(5)->op);  
     }
     
     for (int ii = 6; ii > 0; --ii) {
@@ -100,18 +100,31 @@ add_root(int rnum, char* op)
     strcpy(add->op, op);
     root_list_sanity_check();
 
-    printf("... new version: %d -> \n", add->vnum);    
+    printf("... new version: -> %d \n", add->vnum);    
 }
 
+//CHANGE THIS TO ACCOUNT FOR MKNOD AND OTHER OPERATIONS
 int
 traverse_and_free(int rnum, char* op_from_5)
 {
     slist* sl = s_split(op_from_5, ' ');
     char* path = strdup(sl->next->data);
+
+
+    int rv;
+    if (streq(sl->data, "mknod")) {
+        rv = traverse_and_free_hlp(rnum, dirname(path));
+    }
+    
+    if (streq(sl->data, "write")) {
+        rv = traverse_and_free_hlp(rnum, path);
+    }
+
+    printf("+ traverse_and_free %s(%d, %s) -> %d", sl->data, rnum, path, rv);
+
+
     s_free(sl);
-    int rv = traverse_and_free_hlp(rnum, path);
-    printf("+ travers_and_free(%d, %s) -> %d", rnum, path, rv);
-    return rv;
+    return 0;
 
 }
 
@@ -122,7 +135,12 @@ traverse_and_free_hlp(int rnum, char* path_from_5)
     //get inode for directory,
     int inum = tree_lookup_hlp(path_from_5, rnum);
 
-    if(inum <= 0){
+    if (inum == 0) {
+        return inum;
+    }
+
+    if(inum < 0){
+        assert(0);
         return inum;
     }
 
@@ -150,7 +168,7 @@ rootlist_version_table(){
     for(int ii = 6; ii >= 0; --ii){
         cow_version* curr = get_root_list_idx(ii); //(cow_version*)root_list + ii * sizeof(cow_version);
         char first[32];
-        snprintf(first, sizeof(first), "%d %s", curr->vnum, curr->op);
+        snprintf(first, sizeof(first), "%d %s", curr->vnum, curr->op, curr->rnum);
         build = s_cons(first, build);
     }
     root_list_sanity_check();

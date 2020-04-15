@@ -68,7 +68,7 @@ sub p1ok {
     }
 }
 
-my $nfiles = 45;
+my $nfiles = 50;
 
 
 system("mkdir mnt/numbers");

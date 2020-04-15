@@ -56,6 +56,7 @@ traverse_and_update(const char* path, int old_inum, int new_inum, char* op)
     //  copy directory, add me instead of old inode
     inode* dir = get_inode(inum);
     inode* cow_dir = copy_inode(dir);
+    assert(cow_dir->mode == (mode_t)16877 || cow_dir->mode == (mode_t)16893);
 
     //     get entry of old version (using old_inum)
     //     replace that entry with me (using new_inum)
@@ -64,8 +65,10 @@ traverse_and_update(const char* path, int old_inum, int new_inum, char* op)
     printf("\t[DEBUG] old inum: %d; new inum: %d\n", old_inum, new_inum);
 
     char* pathdup = strdup(path);
-    traverse_and_update(dirname(pathdup), dir->inum, cow_dir->inum, op);
+    int rv = traverse_and_update(dirname(pathdup), dir->inum, cow_dir->inum, op);
     free(pathdup);
+
+    return rv;
     //get inode above me, copy inode above, add me instad of old node
     //if root, do above process, and call add_root()
 }
@@ -95,7 +98,7 @@ storage_init(const char* path)
         add_root(0, op);
 
         inode* root = get_inode(0);
-        root->mode = 040755; // dir
+        root->mode = (mode_t)16877; // dir
     }
     else
     {
@@ -255,7 +258,8 @@ storage_truncate(const char *path, off_t size)
 int
 storage_mknod(const char* path, int mode)
 {
- 
+    printf("+ mknod %s, %d\n", path, mode);
+
     assert(mode != 0);   
     if (path[0] != '/')
     {
@@ -272,10 +276,14 @@ storage_mknod(const char* path, int mode)
     else
     {
         inode* dd = get_inode(dir_inum);
-
+        inode* cow_dd = copy_inode(dd);
+        assert(cow_dd->mode == (mode_t)16877 || cow_dd->mode == 16893);
+        // copy dd -> cow_dd
+        
         char* path_lvar = strdup(path); // get a local copy of the constant char
         char* file = basename(path_lvar); // the file or base directory
-        if (directory_lookup(dd, file) > 0)
+
+        if (directory_lookup(cow_dd, file) > 0)
         {
             rv = -EEXIST;
         }
@@ -285,11 +293,23 @@ storage_mknod(const char* path, int mode)
             int inum = alloc_inode();
             get_inode(inum)->mode = mode;
             get_inode(inum)->refs = 1;
-            rv = directory_put(dd, file, inum);
+
+            // use cow_dd instead of dd
+            rv = directory_put(cow_dd, file, inum);
         }
+
+        if(rv < 0) {
+            return rv;
+        }
+
+        // traverse and update the directory's path
+        char op[24];
+        snprintf(op, sizeof(op), "mknod %s", path);
+        rv = traverse_and_update(dirname(path_lvar), dd->inum, cow_dd->inum, op);
 
         free(path_lvar);
     }
+
 
     return rv;
 }
