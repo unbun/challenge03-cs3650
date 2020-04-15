@@ -378,7 +378,7 @@ storage_link(const char* from, const char* to)
     }
 
     ////////////////////// To inum ///////////////////
-    // soft link or directory (are virtually the same thing)
+    // soft link for directory (are virtually the same thing)
     int s_to_inum = tree_lookup_stop_early(to);
     if (s_to_inum < 0)
     {
@@ -389,14 +389,18 @@ storage_link(const char* from, const char* to)
     char* to_file = basename(to_path_lvar);
 
     // hard link
-    int to_inum = directory_lookup(get_inode(s_to_inum), to_file);
+    int h_to_inum = directory_lookup(get_inode(s_to_inum), to_file);
+
+    inode* cow_to_dir;
 
     int rv = 0;
-    if (to_inum < 0)
+    if (h_to_inum < 0)
     {
         // to does not exist, so make it as a directory entry
-        inode* to_dir = get_inode(s_to_inum);
-        rv = directory_put(to_dir, to_file, h_from_inum);
+        inode* cow_to_dir = get_inode(s_to_inum);
+        // inode* cow_to_dir = copy_inode(to_dir);
+
+        rv = directory_put(cow_to_dir, to_file, h_from_inum);
 
         // update from's references
         inode* from_node = get_inode(h_from_inum);
@@ -407,6 +411,8 @@ storage_link(const char* from, const char* to)
         // to target already exists
         return -EEXIST;
     }
+
+    // traverse_and_update(path, s_to_inum, cow_to_dir->inum, op);
 
     free(from_path_lvar);
     free(to_path_lvar);
