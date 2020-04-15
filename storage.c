@@ -225,8 +225,8 @@ storage_truncate(const char *path, off_t size)
         return inum; //  should be an error value
     }
 
-    inode* cow_node = get_inode(inum);
-    // inode* cow_node = copy_inode(node);
+    inode* node = get_inode(inum);
+    inode* cow_node = copy_inode(node);
 
     // resize node but not more than needed
     if (cow_node->size < size)
@@ -257,7 +257,7 @@ storage_truncate(const char *path, off_t size)
     char op[24];
     snprintf(op, sizeof(op), "truncate %s", path);
 
-   // rv = traverse_and_update(path, node->inum, cow_node->inum, op);
+    rv = traverse_and_update(path, node->inum, cow_node->inum, op);
 
     return rv;
 }
@@ -282,8 +282,8 @@ storage_mknod(const char* path, int mode)
     }
     else
     {
-        inode* cow_dd = get_inode(dir_inum);
-        // inode* cow_dd = copy_inode(dd);
+        inode* dd = get_inode(dir_inum);
+        inode* cow_dd = copy_inode(dd);
         assert(cow_dd->mode == (mode_t)16877 || cow_dd->mode == 16893);
         // copy dd -> cow_dd
         
@@ -310,9 +310,9 @@ storage_mknod(const char* path, int mode)
         }
 
         // traverse and update the directory's path
-        // char op[24];
-        // snprintf(op, sizeof(op), "mknod %s", path);
-        // rv = traverse_and_update(dirname(path_lvar), dd->inum, cow_dd->inum, op);
+        char op[24];
+        snprintf(op, sizeof(op), "mknod %s", path);
+        rv = traverse_and_update(dirname(path_lvar), dd->inum, cow_dd->inum, op);
 
         free(path_lvar);
     }

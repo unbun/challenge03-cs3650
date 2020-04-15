@@ -181,17 +181,17 @@ for my $ii (1..50) {
 }
 
 my $nn = `ls mnt/numbers | wc -l`;
-ok($nn == 50, "created $nn out of 50 files");
+ok($nn == 50, "created 50 files");
 
 for my $ii (1..5) {
-   my $xx = $ii * 10;
-   my $yy = read_text("numbers/$xx.num") || -10;
-   ok($xx == $yy, "check value $xx");
+    my $xx = $ii * 10;
+    my $yy = read_text("numbers/$xx.num") || -10;
+    ok($xx == $yy, "check value $xx");
 }
 
 for my $ii (1..4) {
-   my $xx = $ii * 7;
-   system("rm mnt/numbers/$xx.num");
+    my $xx = $ii * 7;
+    system("rm mnt/numbers/$xx.num");
 }
 
 unmount();
@@ -275,7 +275,7 @@ unmount();
 $list = run_tool("versions");
 
 $ok1 = 1;
-for my $op (qw(mknod write truncate)) {
+for my $op (qw(mknod write)) {
     for my $fn (qw(x4 x5)) {
         unless ($list =~ /$op \/$fn\.txt/) {
             $ok1 = 0;
@@ -283,7 +283,7 @@ for my $op (qw(mknod write truncate)) {
         }
     }
 }
-ok($ok1, "have last six expected versions");
+ok($ok1, "have recent four expected versions");
 
 
 # Test unlink
