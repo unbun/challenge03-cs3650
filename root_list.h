@@ -11,6 +11,7 @@ typedef struct cow_version {
 
 void root_init();
 int get_current_root();
+void swap_root(int vnum);
 void add_root(int rnum, char* op);
 slist* rootlist_version_table();
 cow_version* get_root_list_idx(int idx);

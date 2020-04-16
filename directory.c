@@ -84,7 +84,7 @@ tree_lookup_hlp(const char* path, int rnum)
         if(curr_inum < 0) {
             return curr_inum;
         }
-        
+
         inode* dirnode = get_inode(curr_inum);
         curr_inum = directory_lookup(dirnode, curr_level->data);
 
@@ -113,7 +113,7 @@ directory_put(inode* dd, const char* name, int inum)
     grow_inode(dd, dd->size + sizeof(ddirent));
     get_inode(inum)->refs++;
 
-    // put get the directory's next empty slot
+    // get the directory's next empty slot
     ddirent* to_put = (ddirent*)(pages_get_page(dd->ptrs[0]) + dd->size) - 1;
 
     // populate the spot

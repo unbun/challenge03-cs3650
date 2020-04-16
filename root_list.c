@@ -58,7 +58,7 @@ root_init()
         root_list_sanity_check();
     }
 
-    printf("+ root_init() -> %d\n", 1);
+    // printf("+ root_init() -> %d\n", 1);
 
     // add_root(0);
 }
@@ -72,6 +72,42 @@ get_current_root(){
 cow_version*
 get_root_list_idx(int idx){
     return (cow_version*)root_list + ((idx) * sizeof(cow_version*));
+}
+
+
+
+
+void
+swap_root(int vnum)
+{
+    cow_version* new_root = NULL;
+    for (size_t ii=0; ii< NUM_VESRIONS; ++ii) {
+        cow_version* tmp = get_root_list_idx(ii);
+        if (tmp->vnum == vnum){
+            new_root = get_root_list_idx(ii);
+        }
+    }
+
+
+    if (new_root == NULL) {
+        assert(0);
+    }
+
+    cow_version* curr = (cow_version*)root_list;
+    cow_version* prev = 0;
+
+    for (int ii = NUM_VESRIONS - 1; ii > 0; --ii) {
+        curr = get_root_list_idx(ii); //(cow_version*)root_list + ((ii) * sizeof(cow_version));
+        prev = get_root_list_idx(ii-1); //(cow_version*)root_list + ((ii - 1) * sizeof(cow_version));
+        memcpy(curr, prev, sizeof(cow_version));
+    }
+    
+    cow_version* add = (cow_version*)root_list;
+    add->rnum = new_root->rnum;
+    add->vnum = new_root->vnum;
+    strcpy(add->op, new_root->op);
+    root_list_sanity_check();
+    
 }
 
 //push_back onto root stack
@@ -149,6 +185,11 @@ traverse_and_free(cow_version* to_free, cow_version* next_ver)
         rv = traverse_and_free_hlp(rnum6, path5);
     }
 
+    if(streq(syscall5, "link"))
+    {
+        rv = traverse_and_free_hlp(rnum6, dirname(path5));
+    }
+
     printf("+ traverse_and_free ({%s %s r=%d}, {%s %s}) -> %d\n", syscall6, path6, rnum6, syscall5, path5, rv);
 
     free(syscall5);
@@ -197,7 +238,7 @@ traverse_and_free_hlp(int rnum6, char* path_from_5)
 
 slist*
 rootlist_version_table(){
-    printf("+ rootlist_version_table() -> 7\n");
+    // printf("+ rootlist_version_table() -> 7\n");
 
     slist* build = 0;
     // int size = min(7, get_root_list_idx(0)->vnum);
@@ -206,9 +247,13 @@ rootlist_version_table(){
     for(int ii = NUM_VESRIONS - 1; ii >= 0; --ii){
         cow_version* curr = get_root_list_idx(ii); //(cow_version*)root_list + ii * sizeof(cow_version);
 
+        if(curr->vnum <= 0) {
+            break;
+        }
+
         char first[32];
-        // snprintf(first, sizeof(first), "%d %s", curr->vnum, curr->op);
-        snprintf(first, sizeof(first), "%d %s {r=%d}", curr->vnum, curr->op, curr->rnum);
+        snprintf(first, sizeof(first), "%d %s", curr->vnum, curr->op);
+        // snprintf(first, sizeof(first), "%d %s {r=%d}", curr->vnum, curr->op, curr->rnum);
 
         build = s_cons(first, build);
     }

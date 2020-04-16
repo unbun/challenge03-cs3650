@@ -221,7 +221,13 @@ sub run_tool {
 sub get_vers {
     my $text = run_tool("versions");
     my @lines = split /\n/, $text;
+
+    # for my $ll (@lines) {
+    #     say "version found: $ll"; 
+    # }
+
     (scalar @lines > 1) or return -2;
+
     $lines[1] =~ /^(\d+)\s/ or return -1;
     return +$1;
 }
@@ -289,6 +295,7 @@ ok($ok1, "have recent four expected versions");
 # Test unlink
 
 $ver0 = get_vers();
+say "ver0: $ver0";
 ok(disk_contains("/x4.txt"), "unlink precond");
 
 mount();

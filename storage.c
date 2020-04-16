@@ -81,7 +81,7 @@ traverse_and_update(const char* path, int old_inum, int new_inum, char* op)
 void
 storage_init(const char* path)
 {
-    printf("+ storage_init(%s);\n", path);
+    // printf("+ storage_init(%s);\n", path);
     pages_init(path); // alloc page 0 for bitmaps
     root_init();      // alloc page 1 for root list 
     inode_init();     // should alloc page 2 for inodes
@@ -334,6 +334,7 @@ storage_unlink(const char* path)
 
     char* path_lvar = strdup(path);  // get a local copy of the constant char
     char* file = basename(path_lvar);  // the file or base directory
+
     int inum = directory_lookup(get_inode(dir_inum), file);
     if (inum < 0)
     {
@@ -344,11 +345,31 @@ storage_unlink(const char* path)
         //get the file or directory
         int path_inum = tree_lookup(path);
         inode* node = get_inode(path_inum);
-        // we will delete it
-        --node->refs;
+        inode* cow_node = copy_inode(node);
 
-        // directory will update its entries and links
-        rv = directory_delete(get_inode(dir_inum), file);
+
+        // we will delete it
+        cow_node->refs = cow_node->refs - 1;
+
+        char op[24];
+        snprintf(op, sizeof(op), "unlink %s", path);
+        //                       path   old       new             op
+        rv = traverse_and_update(path, path_inum, cow_node->inum, op);
+        if(rv < 0) {
+            return rv;
+        }
+
+        // by this point, directory's entries list is updated with the cow node
+        // which is reflected by a new copy of the directory
+        int cow_dir = tree_lookup_stop_early(path);
+        if (dir_inum < 0)
+        {
+            return dir_inum;
+        }
+
+
+        // directory will update its entries and links 
+        rv = directory_delete(get_inode(cow_dir), file);
     }
 
     free(path_lvar);
@@ -391,15 +412,14 @@ storage_link(const char* from, const char* to)
     // hard link
     int h_to_inum = directory_lookup(get_inode(s_to_inum), to_file);
 
-    inode* cow_to_dir;
+    inode* to_dir = get_inode(s_to_inum);
+    inode* cow_to_dir = copy_inode(to_dir);
 
     int rv = 0;
+
+    // the to inum does not exist
     if (h_to_inum < 0)
     {
-        // to does not exist, so make it as a directory entry
-        inode* cow_to_dir = get_inode(s_to_inum);
-        // inode* cow_to_dir = copy_inode(to_dir);
-
         rv = directory_put(cow_to_dir, to_file, h_from_inum);
 
         // update from's references
@@ -412,7 +432,17 @@ storage_link(const char* from, const char* to)
         return -EEXIST;
     }
 
-    // traverse_and_update(path, s_to_inum, cow_to_dir->inum, op);
+    if(rv < 0) {
+        free(from_path_lvar);
+        free(to_path_lvar);
+        return rv;
+    }
+
+    char* path = strdup(from);
+
+    char op[24];
+    snprintf(op, sizeof(op), "link %s %s", from, to);
+    rv = traverse_and_update(dirname(path), s_to_inum, cow_to_dir->inum, op);
 
     free(from_path_lvar);
     free(to_path_lvar);
@@ -532,7 +562,7 @@ storage_list(const char* path)
             result = s_concat(storage_list(child_path), result);
         }
 
-        result = s_cons(child_path, result);
+        result = s_cons(++child_path, result);
 
         curr = curr->next;
     }
