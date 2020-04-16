@@ -20,12 +20,18 @@ typedef struct inode
 } inode;
 */
 
-// ATTRIBUTION: Michael Herbert (past CS3650 student)
-// helped me understand how to keep track of the inodes with the base
-// pointer. base pointer allows me to treat inodes like their own set of blocks
+
+// TODO: best way of version tracking
+//     - maybe have a list of these bitmaps, one for each verision?
+//     - maybe make a special structure for the root inode
+// will probably need to do the same stuff for static pages_fd and pages_bse
+
+#define NUM_DIRECT_PAGES 4
 
 static void* inodes_base = 0;
-const int INODE_COUNT = 4096 / sizeof(inode);
+
+
+const int INODE_COUNT = NUM_DIRECT_PAGES * (4096 / sizeof(inode));
 
 
 //after calling this, inodes_base should be set up
@@ -33,18 +39,21 @@ void
 inode_init()
 {
     // set the page bit for the inodes
-    // the inodes should be the first things after the bitmaps
-    if (!bitmap_get(get_pages_bitmap(), 1))
-    {
+    // the inodes should be the first th2ngs after the bitmaps
+    if (!bitmap_get(get_pages_bitmap(), 2)) {
         // allocate a page for the
         int page = alloc_page();
-        assert(page == 1);
+        assert(page == 2);
         assert(inodes_base = pages_get_page(page));
+
+        for (size_t ii=0; ii<NUM_DIRECT_PAGES - 1; ++ii) {
+            assert(alloc_page() == ii + 3);
+        }
     }
     else
     {
         // set the start of the inodes
-        inodes_base = pages_get_page(1);
+        inodes_base = pages_get_page(2); 
     }
 }
 
@@ -52,10 +61,130 @@ inode_init()
 inode*
 get_inode(int inum)
 {
+    // assert(inum >= 0);
     // max amount of inodes is 4096
-    // assert(inum * sizeof(inode) < 4096);
+    int inumspot = (inum * (int)sizeof(inode));
+    int inumsize = (4096 * (int)NUM_DIRECT_PAGES);
+    int assertMe = inumspot < inumsize;
+    if(!assertMe) {
+        printf("\t[DEBUG] inum %d out of bounds, %d < %d = %d", inum, inumspot, inumsize, assertMe);
+    }
+    assert(assertMe);
     return (inode*)inodes_base + inum;
 }
+
+/*
+    int refs;              // number of references
+    int mode;              // permission & type
+    int size;              // bytes
+    int ptrs[NUM_PTRS];    // direct pointers to the page
+    int iptr;              // single indirect pointer
+
+    struct timespec ts[2]; // last updated time
+*/
+
+inode*
+copy_inode(inode* node)
+{
+    inode* new_inode = get_inode(alloc_inode());
+
+    printf("+ copy( %d{size=%d) ) ...\n", node->inum, node->size);
+    print_inode(node);
+
+    int blocks_to_grow = bytes_to_pages(node->size); // how many 4k pages they are asking for
+    int blocks_on_node = 0; // how many 4k pages we have
+
+
+    // make the number of blocks this node has
+    // match the blocks that are being requested
+    while (blocks_on_node < blocks_to_grow)
+    {
+        // if we haven't used all the pages in the direct pointers
+        if (blocks_on_node < NUM_PTRS) 
+        {
+            //node has a direct block
+            new_inode->ptrs[blocks_on_node] = alloc_page();
+            memcpy(pages_get_page(new_inode->ptrs[blocks_on_node]),
+                   pages_get_page(node->ptrs[blocks_on_node]), 4096);
+        }
+        else //go to node's indirect blocks
+        {            
+            // haven't used node's indirect block yet
+            if (blocks_on_node == NUM_PTRS)
+            {
+                new_inode->iptr = alloc_page();
+            }
+
+            int iptrii = blocks_on_node - NUM_PTRS;
+
+            // alloc the next needed block on indirect block
+            int* iptrs = (int*)pages_get_page(new_inode->iptr);
+            iptrs[iptrii] = alloc_page();
+
+            int* old_iptrs = (int*)pages_get_page(node->iptr);
+
+            memcpy(pages_get_page(iptrs[iptrii]), 
+                   pages_get_page(old_iptrs[iptrii]), 4096);
+        }
+
+        blocks_on_node++;
+    }
+
+    new_inode->size = node->size;
+    new_inode->refs = node->refs;
+    new_inode->mode = node->mode;
+    new_inode->ts[0] = node->ts[0];
+    new_inode->ts[1] = node->ts[1];
+
+    printf("+ end of copy_inode( %d{size=%d} ) -> %d{size=%d}\n",
+        node->inum, node->size, new_inode->inum, new_inode->size);
+
+    return new_inode;
+}
+
+
+/*inode* 
+copy_inode(inode* node)
+{
+    printf("+ copy_inode(%d) -> ... \n", node->inum);
+
+    int new_inum = alloc_inode();
+    inode* new_node  = get_inode(new_inum);
+
+    new_node->refs = node->refs;
+    new_node->mode = node->mode;
+    assert(new_node->mode == node->mode);
+    assert(new_node->mode != 0);
+
+    grow_inode(new_node, node->size);
+    
+    memcpy(pages_get_page(new_node->ptrs[0]), pages_get_page(node->ptrs[0]), 4096);
+
+    if(node->size > 4096) {
+        memcpy(pages_get_page(new_node->ptrs[1]), pages_get_page(node->ptrs[1]), 4096);
+    }
+
+    // the node had iptrs
+    // therefore grow_inode allocated an iptr page for new_node
+    // ...MAYBE
+    if(node->size > 4096 * 2) {
+        int ii = 0;
+        while(node->iptr[ii] != 0) {
+            memcpy(pages_get_page(new_node->iptr[ii]), pages_get_page(node->iptr[ii]), 4096);
+        }
+    }
+
+    //TODO: MAYBE CHANGE THIS
+    //new_node->iptr = node->iptr;
+
+    new_node->ts[0] = node->ts[0];
+    new_node->ts[1] = node->ts[1];
+
+    printf("... end of copy_inode(%d) -> %d\n", node->inum, new_node->inum);
+
+    return new_node;
+}*/
+
 
 int
 alloc_inode()
@@ -85,9 +214,18 @@ alloc_inode()
 void
 free_inode(inode* node)
 {
-    printf("+ free_inode(%d)\n", node->inum);
+    // never free the inodes_base
+    assert(node->inum != 0);
+
+    printf("+ free_inode(%d)...\n", node->inum);
+
+    //if(!inode_is_dir(node)){
+    shrink_inode(node, 0);
+    //}
+
     print_inode(node);
     bitmap_put(get_inode_bitmap(), node->inum, 0);
+    assert(bitmap_get(get_inode_bitmap(), node->inum) == 0);
 }
 
 // make the given node have enough blocks to fill the given size
@@ -98,20 +236,22 @@ grow_inode(inode* node, int size)
     printf("+ grow_inode( ... , %d) \n", size);
     print_inode(node);
 
-    int blocks_to_grow = bytes_to_pages(size);
-    int blocks_on_node = bytes_to_pages(node->size);
+    int blocks_to_grow = bytes_to_pages(size); // how many 4k pages they are asking for
+    int blocks_on_node = bytes_to_pages(node->size); // how many 4k pages we have
+
 
     // make the number of blocks this node has
     // match the blocks that are being requested
     while (blocks_on_node < blocks_to_grow)
     {
-        if (blocks_on_node < NUM_PTRS)
+        // if we haven't used all the pages in the direct pointers
+        if (blocks_on_node < NUM_PTRS) 
         {
             //node has a direct block
             node->ptrs[blocks_on_node] = alloc_page();
         }
         else //go to node's indirect blocks
-        {
+        {            
             // haven't used node's indirect block yet
             if (blocks_on_node == NUM_PTRS)
             {
@@ -137,18 +277,37 @@ shrink_inode(inode* node, int size) {
 
     int blocks_to_shrink = bytes_to_pages(size);
     int blocks_on_node = bytes_to_pages(node->size);
+    //if 0 < size < 4096   -> [n, 0], 0
+    //if 4096 < size < 2*4096   -> [n, m], 0
+    //if size > 2*4069   -> [n, m] l
 
+    int pages_freed = 0;
+    int pnum = 0;
     // make the number of blocks this node has
     // match the blocks that are being requested
     while (blocks_on_node > blocks_to_shrink) {
-        free_page(inode_get_pnum(node, blocks_on_node));
+        //puts("\n\n\n");
+
+        pnum = inode_get_pnum(node, blocks_on_node - 1);
+
+        printf("pnum(%d[%d]): %d\n\n\n", node->inum, blocks_on_node - 1, pnum);
+
+        // avoid 0, 1, 2,, [3, NDP=1]
+        //assert(pnum > 2 + NUM_DIRECT_PAGES);
+
+        //0, 1, 2 - (2 + NUM_DIRECT_PAGES) are all special
+        if(pnum > (2 + NUM_DIRECT_PAGES)) {
+            free_page(pnum);
+            pages_freed++;
+        }
+        
         blocks_on_node--;
     }
 
     // don't need iptrs page anymore, free it
-    if (blocks_to_shrink <= NUM_PTRS) {
-        free_page(node->iptr);
-    }
+    //if (blocks_to_shrink <= NUM_PTRS) {
+        //free_page(node->iptr);
+    //}
 
     node->size = size;
     return node->size;

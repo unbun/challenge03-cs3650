@@ -165,7 +165,7 @@ nufs_rmdir(const char *path)
     }
 
     printf("rmdir(%s) -> %d\n", path, rv);
-    return 0; // TODO: implement
+    return 0;
 }
 
 // implements: man 2 rename
@@ -181,7 +181,7 @@ nufs_rename(const char *from, const char *to)
 int
 nufs_chmod(const char *path, mode_t mode)
 {
-    int rv = -1; // TODO: implement
+    int rv = storage_chmod(path, mode);
     printf("chmod(%s, %04o) -> %d\n", path, mode, rv);
     return rv;
 }

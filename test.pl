@@ -275,7 +275,7 @@ unmount();
 $list = run_tool("versions");
 
 $ok1 = 1;
-for my $op (qw(mknod write truncate)) {
+for my $op (qw(mknod write)) {
     for my $fn (qw(x4 x5)) {
         unless ($list =~ /$op \/$fn\.txt/) {
             $ok1 = 0;
@@ -283,7 +283,7 @@ for my $op (qw(mknod write truncate)) {
         }
     }
 }
-ok($ok1, "have last six expected versions");
+ok($ok1, "have recent four expected versions");
 
 
 # Test unlink

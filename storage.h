@@ -21,5 +21,7 @@ int    storage_link(const char *from, const char *to);
 int    storage_rename(const char *from, const char *to);
 int    storage_set_time(const char* path, const struct timespec ts[2]);
 slist* storage_list(const char* path); // directory_list handles everything
+int storage_chmod(const char* path, mode_t mode);
+char* get_common_ancestor(char* path1, char* path2);
 
 #endif

@@ -12,7 +12,6 @@
 typedef struct dirent {
     char name[DIR_NAME];
     int  inum;
-    char _reserved[12];
 } dirent;
 
 void directory_init();
@@ -23,5 +22,8 @@ int directory_delete(inode* dd, const char* name);
 slist* directory_list(const char* path);
 void print_directory(inode* dd);
 
+
+// TODO: be able to copy a directory put update one of its inums
+// TODO: inode* directory_copy(inode* dd, int changed_entry)
 #endif
 
