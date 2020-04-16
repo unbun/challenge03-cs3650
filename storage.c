@@ -362,9 +362,9 @@ storage_unlink(const char* path)
         // by this point, directory's entries list is updated with the cow node
         // which is reflected by a new copy of the directory
         int cow_dir = tree_lookup_stop_early(path);
-        if (dir_inum < 0)
+        if (cow_dir < 0)
         {
-            return dir_inum;
+            return cow_dir;
         }
 
 

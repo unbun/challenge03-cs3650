@@ -12,8 +12,7 @@
 #include "directory.h"
 #include "root_list.h"
 
-#define NUM_VESRIONS 7
-
+#define NUM_VERSIONS 7
 
 static void* root_list = NULL;
 
@@ -26,8 +25,9 @@ typedef struct cow_version {
 */
 
 //makes sure data did not get corrupted in root_list
-void root_list_sanity_check() {
-    for(int ii = NUM_VESRIONS - 1; ii >= 0; --ii) {
+void 
+root_list_sanity_check() {
+    for(int ii = NUM_VERSIONS - 1; ii >= 0; --ii) {
         cow_version* curr = get_root_list_idx(ii);
         if (curr != 0) {
             assert(curr->vnum < 10000);
@@ -49,7 +49,7 @@ root_init()
         int page = alloc_page();
         assert(page == 1);
         assert(root_list = pages_get_page(page));
-        memset(root_list, 0, NUM_VESRIONS * sizeof(cow_version*));
+        memset(root_list, 0, NUM_VERSIONS * sizeof(cow_version*));
     }
     else
     {
@@ -80,32 +80,27 @@ get_root_list_idx(int idx){
 void
 swap_root(int vnum)
 {
-    cow_version* new_root = NULL;
-    for (size_t ii=0; ii< NUM_VESRIONS; ++ii) {
+    cow_version new_root;
+    for (size_t ii=0; ii< NUM_VERSIONS; ++ii) {
         cow_version* tmp = get_root_list_idx(ii);
         if (tmp->vnum == vnum){
-            new_root = get_root_list_idx(ii);
+            new_root = *get_root_list_idx(ii);
         }
-    }
-
-
-    if (new_root == NULL) {
-        assert(0);
     }
 
     cow_version* curr = (cow_version*)root_list;
     cow_version* prev = 0;
 
-    for (int ii = NUM_VESRIONS - 1; ii > 0; --ii) {
+    for (int ii = NUM_VERSIONS - 1; ii > 0; --ii) {
         curr = get_root_list_idx(ii); //(cow_version*)root_list + ((ii) * sizeof(cow_version));
         prev = get_root_list_idx(ii-1); //(cow_version*)root_list + ((ii - 1) * sizeof(cow_version));
         memcpy(curr, prev, sizeof(cow_version));
     }
     
     cow_version* add = (cow_version*)root_list;
-    add->rnum = new_root->rnum;
-    add->vnum = new_root->vnum;
-    strcpy(add->op, new_root->op);
+    add->rnum = new_root.rnum;
+    add->vnum = ((cow_version*)root_list)->vnum + 1;
+    strcpy(add->op, new_root.op);
     root_list_sanity_check();
     
 }
@@ -122,9 +117,9 @@ add_root(int rnum, char* op)
     int curr_vnum = curr->vnum;
 
     // garbage collection
-    if(curr_vnum > NUM_VESRIONS - 1){
-        cow_version* to_free = get_root_list_idx(NUM_VESRIONS - 1);
-        cow_version* replacable = get_root_list_idx(NUM_VESRIONS - 2);
+    if(curr_vnum > NUM_VERSIONS - 1){
+        cow_version* to_free = get_root_list_idx(NUM_VERSIONS - 1);
+        cow_version* replacable = get_root_list_idx(NUM_VERSIONS - 2);
         int rv = traverse_and_free(to_free, replacable); 
 
         if(rv < 0) {
@@ -133,7 +128,7 @@ add_root(int rnum, char* op)
         }
     }
     
-    for (int ii = NUM_VESRIONS - 1; ii > 0; --ii) {
+    for (int ii = NUM_VERSIONS - 1; ii > 0; --ii) {
         curr = get_root_list_idx(ii); //(cow_version*)root_list + ((ii) * sizeof(cow_version));
         prev = get_root_list_idx(ii-1); //(cow_version*)root_list + ((ii - 1) * sizeof(cow_version));
         memcpy(curr, prev, sizeof(cow_version));
@@ -238,24 +233,22 @@ traverse_and_free_hlp(int rnum6, char* path_from_5)
 
 slist*
 rootlist_version_table(){
-    // printf("+ rootlist_version_table() -> 7\n");
+    //printf("+ rootlist_version_table() -> 7\n");
 
     slist* build = 0;
     // int size = min(7, get_root_list_idx(0)->vnum);
     
     // build this list backwards so that it's in the right order for printing
-    for(int ii = NUM_VESRIONS - 1; ii >= 0; --ii){
+    for(int ii = NUM_VERSIONS - 1; ii >= 0; --ii){
         cow_version* curr = get_root_list_idx(ii); //(cow_version*)root_list + ii * sizeof(cow_version);
 
-        if(curr->vnum <= 0) {
-            break;
+        if(curr->vnum > 0) {
+            char first[32];
+            snprintf(first, sizeof(first), "%d %s", curr->vnum, curr->op);
+            // snprintf(first, sizeof(first), "%d %s {r=%d}", curr->vnum, curr->op, curr->rnum);
+
+            build = s_cons(first, build);
         }
-
-        char first[32];
-        snprintf(first, sizeof(first), "%d %s", curr->vnum, curr->op);
-        // snprintf(first, sizeof(first), "%d %s {r=%d}", curr->vnum, curr->op, curr->rnum);
-
-        build = s_cons(first, build);
     }
     root_list_sanity_check();
     return build;
