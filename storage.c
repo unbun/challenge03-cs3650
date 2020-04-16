@@ -441,7 +441,7 @@ storage_link(const char* from, const char* to)
     char* path = strdup(from);
 
     char op[24];
-    snprintf(op, sizeof(op), "link %s %s", from, to);
+    snprintf(op, sizeof(op), "link %s to %s", from, to);
     rv = traverse_and_update(dirname(path), s_to_inum, cow_to_dir->inum, op);
 
     free(from_path_lvar);
@@ -496,24 +496,191 @@ storage_rename(const char* path, const char* to)
 }
 
 
+// Our attempt at rename with cow
+// Our rename is in two distinct steps:
+//  1) make a new file that is a copy of "path" but in the directory of "to"
+//     and also named the basename of "to"
+//  2) delete the file described by "path"
+// This means we are essentially updating 2 inodes, the source directory [dirname(path)]
+// and the destination directory [dirname(to)].
+// So we tried to treat it as two seperate copy-on-writes, and then 
+// combine them at their common ancestor with our garbage-collection,
+// (i.e. we find their ancestor, and free step 1's copies of everything between the
+//  common ancestor and the root) 
+// this failed at the point when we are doing that garbage collection due to stack smashing.
+// Likely because our depend on having distinct roots, so the garbage collection abstraction
+// we attempted to do wasn't enough. It does compile tho!
+int
+storage_rename_cow(const char* path, const char* to)
+{
+    // Should be similar to link
+
+    int dir_inum = tree_lookup_stop_early(path);
+    if (dir_inum < 0)
+    {
+        return dir_inum;
+    }
+
+    int rv = 0;
+
+    char* path_lvar = strdup(path);
+    char* file = basename(path_lvar);
+
+    int inum = directory_lookup(get_inode(dir_inum), file);
+
+    if (inum < 0)
+    {
+        rv = inum;
+    }
+    else
+    {
+        // found existing item
+        int dest_dir_inum = tree_lookup_stop_early(to);
+        if (dest_dir_inum < 0)
+        {
+            rv = dest_dir_inum;
+        }
+        else
+        {
+            char* local_to = strdup(to);
+            char* to_file = basename(local_to);
+
+            // make it as a directory entry
+
+            inode* src_dir = get_inode(dir_inum);
+            char* src_path = dirname(path_lvar);
+            
+            inode* dest_dir = get_inode(dest_dir_inum);
+            char* dest_path = dirname(strdup(to));
+
+
+            char op1[24];
+            char op2[24];
+            sprintf(op1, "rename(1) %s to %s", path, to);
+            sprintf(op2, "rename %s to %s", path, to);
+
+            inode* cow_dest = copy_inode(dest_dir);
+            directory_put(cow_dest, to_file, inum);
+            traverse_and_update(dest_path, dest_dir->inum, cow_dest->inum, op1);
+
+            inode* cow_src = copy_inode(src_dir);
+            directory_delete(src_dir, file);
+            traverse_and_update(src_path, src_dir->inum, cow_src->inum, op2);
+
+            int to_free = get_root_list_idx(1)->rnum;
+            char* path5 = get_common_ancestor(src_path, dest_path);
+            printf("!!!rename free-ing: %s,%s -> %s\n\n\n", src_path, dest_path, path5);
+            traverse_and_free_hlp(to_free, path5);
+
+            free(local_to);
+        }
+    }
+
+    free(path_lvar);
+    return rv;
+}
+
+char*
+get_common_ancestor(char* path1, char* path2)
+{
+    if(streq(path1, "") || streq(path2, "")) {
+        return "/";
+    }
+
+    slist* list1 = s_split(path1, '/');
+    slist* list2 = s_split(path2, '/');
+
+    slist* list1_it = list1;
+    slist* list2_it = list2;
+
+    char* data1 = list1->data;
+    char* data2 = list2->data;
+
+    char* result = "";
+
+    while(list1_it && list2_it){
+        if(!streq(data1, data2)) {
+            s_free(list1);
+            s_free(list2);
+            return result;
+        }
+
+        result = strcat(data1, result);
+
+        data1 = list1_it->data;
+        data2 = list2_it->data;
+
+        list1_it = list1_it->next;
+        list2_it = list2_it->next;
+    }
+
+    return "/";
+}
+
 int
 storage_set_time(const char* path, const struct timespec ts[2])
 {
-    int dir_inum = tree_lookup_stop_early(path);
-    if (dir_inum < 0)
-        return dir_inum;
-
-
     int inum = tree_lookup(path);
     if (inum < 0)
         return inum;
 
-    //TODO: Idk why I would need to update the struct twice for the memcpy to show up in gdb
+    int rv = 0;
 
-    if (inum != 0) // updating twice for the root breaks the mount sometimes
-        memcpy(get_inode(dir_inum)->ts, ts, 2 * sizeof(struct timespec));
+    char* lpath = strdup(path);
 
-    memcpy(get_inode(inum)->ts, ts, 2 * sizeof(struct timespec));
+    // don't write to the inodes_base
+    if(inum != 0){
+        inode* file_node = get_inode(inum);
+        inode* cow_file = copy_inode(file_node);
+        memcpy(cow_file->ts, ts, 2 * sizeof(struct timespec));
+
+        char op[24];
+        sprintf(op, "set time %s", lpath);
+        rv = traverse_and_update(lpath, inum, cow_file->inum, op);
+    }
+    // int traverse_and_update(const char* path, int old_inum, int new_inum, char* op)
+
+    // Update the times of the directory as well.
+    // directory has already been cow-ed
+    int dir_inum = tree_lookup_stop_early(path); //lpath might be mutated
+    if (dir_inum < 0) {
+        free(lpath);
+        return dir_inum;
+    }
+    // don't write to the inodes_base
+    if (dir_inum != 0) {
+        inode* dir_node = get_inode(dir_inum);
+        memcpy(dir_node->ts, ts, 2 * sizeof(struct timespec));
+    }
+
+    free(lpath);
+    return 0;
+}
+
+int
+storage_chmod(const char *path, mode_t mode)
+{
+    int inum = tree_lookup(path);
+    if (inum < 0)
+        return inum;
+
+    int rv = 0;
+
+    char* lpath = strdup(path);
+
+    // don't write to the inodes_base
+    if(inum != 0){
+        inode* file_node = get_inode(inum);
+        inode* cow_file = copy_inode(file_node);
+        cow_file->mode = mode;
+
+        char op[24];
+        sprintf(op, "chmod %s", lpath);
+        rv = traverse_and_update(lpath, inum, cow_file->inum, op);
+    }
+
+    // int traverse_and_update(const char* path, int old_inum, int new_inum, char* op)
+    free(lpath);
     return 0;
 }
 
@@ -569,3 +736,4 @@ storage_list(const char* path)
 
     return result;
 }
+

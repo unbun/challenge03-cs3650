@@ -159,10 +159,10 @@ traverse_and_free(cow_version* to_free, cow_version* next_ver)
     char* syscall5 = strdup(sl5->data);
     char* path5 = strdup(sl5->next->data);
 
-    s_free(sl5);
-    s_free(sl6);
 
     if(streq(syscall6, "init") || streq(syscall5, "init")){
+        s_free(sl6);
+        s_free(sl5);
         return 0;
     }
 
@@ -184,6 +184,29 @@ traverse_and_free(cow_version* to_free, cow_version* next_ver)
     {
         rv = traverse_and_free_hlp(rnum6, dirname(path5));
     }
+
+    if(streq(syscall5, "set")){ // set time
+        path5 = sl5->next->next->data;
+        rv = traverse_and_free_hlp(rnum6, path5);
+    }
+
+    if(streq(syscall5, "chmod")){ // set time
+        rv = traverse_and_free_hlp(rnum6, path5);
+    }
+
+    s_free(sl6);
+    s_free(sl5);
+
+    /*
+    // See line 499 in storage.c
+    if(streq(syscall5, "rename(1)")){
+        rv = traverse_and_free_hlp(rnum6, path5);
+    }
+
+    if(streq(syscall5, "rename")){
+        rv = traverse_and_free_hlp(rnum6, dirname(path5));
+    }
+    */
 
     printf("+ traverse_and_free ({%s %s r=%d}, {%s %s}) -> %d\n", syscall6, path6, rnum6, syscall5, path5, rv);
 
